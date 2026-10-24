@@ -6,7 +6,7 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "vitrine_express_db"
-database_id = "your-cloudflare-d1-database-id-here"
+database_id = "e3621be0-d364-447f-9608-774c58a9f053"
 
 # Environment variables
 [vars]
