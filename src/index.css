@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom minimal scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Print optimizations for Store Counter Poster */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  header, nav, .print\:hidden {
+    display: none !important;
+  }
+
+  #printable-poster {
+    margin: 0 auto !important;
+    padding: 2cm !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

@@ -1,0 +1,14 @@
+name = "vitrine-express"
+compatibility_date = "2024-04-01"
+pages_build_output_dir = "dist"
+
+# Cloudflare D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "vitrine_express_db"
+database_id = "your-cloudflare-d1-database-id-here"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+ADMIN_KEY = "karis_admin_secret_key"
