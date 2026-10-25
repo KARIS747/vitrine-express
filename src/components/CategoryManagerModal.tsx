@@ -45,10 +45,16 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   };
 
   const handleDeleteCategory = async (cat: Category) => {
-    if (window.confirm(`Supprimer la catégorie "${cat.name}" ? Les produits associés ne seront pas supprimés mais déclassés.`)) {
-      await dbService.deleteCategory(cat.id);
-      toast.success("Catégorie supprimée");
+    if (!window.confirm(`Supprimer la catégorie "${cat.name}" ? Les produits associés ne seront pas supprimés mais déclassés.`)) {
+      return;
+    }
+
+    const result = await dbService.deleteCategory(store.id, cat.id);
+    if (result.success) {
+      toast.success('Catégorie supprimée');
       onRefresh();
+    } else {
+      toast.error(result.error ?? 'Erreur lors de la suppression');
     }
   };
 

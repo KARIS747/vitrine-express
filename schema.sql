@@ -17,8 +17,10 @@ CREATE TABLE IF NOT EXISTS stores (
     address_notes TEXT,                    -- Précision (ex: Face Boulangerie Saker)
     logo_url TEXT,                         -- Avatar / Logo
     banner_url TEXT,                       -- Photo de couverture / enseigne
+    theme_primary TEXT DEFAULT '#059669',  -- Couleur principale de la vitrine
+    theme_accent TEXT DEFAULT '#F59E0B',   -- Couleur d'accent de la vitrine
     license_key TEXT UNIQUE NOT NULL,      -- Clé de licence délivrée par Karis
-    pin_code TEXT NOT NULL,                -- Code PIN / Mot de passe du boutiquier
+    pin_code TEXT NOT NULL,                -- PIN haché (hmac-sha256$sel$hash) ou ancien PIN en clair
     max_products INTEGER DEFAULT 20,       -- Quota souscrit (défaut: 20 produits pour 5000 FCFA/an)
     expires_at TEXT NOT NULL,              -- Date d'expiration ISO (ex: '2027-10-25T00:00:00Z')
     is_active INTEGER DEFAULT 1,           -- 1 = Actif, 0 = Suspendu par Karis
@@ -82,7 +84,18 @@ CREATE TABLE IF NOT EXISTS licenses (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Données de démonstration réalistes pour démarrer immédiatement
+-- 5. Limitation des tentatives de connexion (admin et boutiquiers)
+CREATE TABLE IF NOT EXISTS auth_attempts (
+    limiter_key TEXT PRIMARY KEY,          -- Hash de l'IP, de la licence ou de la boutique
+    failures INTEGER DEFAULT 0,            -- Échecs dans la fenêtre courante
+    window_started_at TEXT NOT NULL,       -- Début de la fenêtre
+    blocked_until TEXT,                    -- Fin du blocage temporaire
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_attempts_updated ON auth_attempts(updated_at);
+
+-- 6. Données de démonstration réalistes pour démarrer immédiatement
 INSERT OR IGNORE INTO stores (
     id, slug, name, tagline, description, whatsapp_number, phone_call, 
     city, quarter, address_notes, logo_url, banner_url, license_key, pin_code, 

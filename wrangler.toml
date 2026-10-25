@@ -11,4 +11,3 @@ database_id = "e3621be0-d364-447f-9608-774c58a9f053"
 # Environment variables
 [vars]
 ENVIRONMENT = "production"
-ADMIN_KEY = "karis_admin_secret_key"

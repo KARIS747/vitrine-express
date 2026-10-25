@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Store } from '../types';
-import { X, Printer, Download, Sparkles, MapPin, Share2 } from 'lucide-react';
+import { generateQRCodeDataUrl } from '../utils/qrCode';
+import { X, Printer, Sparkles, MapPin, Share2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface QRPosterModalProps {
@@ -15,18 +16,41 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
   onClose,
   store
 }) => {
-  if (!isOpen) return null;
+  const [qrImageUrl, setQrImageUrl] = useState('');
+  const storeUrl = `${window.location.origin}/boutique/${store.slug}`;
 
-  const storeUrl = `${window.location.origin}?store=${store.slug}`;
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=1&color=14-19-24&data=${encodeURIComponent(storeUrl)}`;
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+    setQrImageUrl('');
+
+    generateQRCodeDataUrl(storeUrl)
+      .then((dataUrl) => {
+        if (!cancelled) setQrImageUrl(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('Impossible de générer le QR code');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, storeUrl]);
+
+  if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(storeUrl);
-    toast.success("Lien de la vitrine copié dans le presse-papier !");
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(storeUrl);
+      toast.success('Lien de la vitrine copié dans le presse-papier');
+    } catch {
+      toast.error('Impossible de copier le lien');
+    }
   };
 
   return (
@@ -72,11 +96,17 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
           <div id="printable-poster" className="p-6 sm:p-8 text-center bg-white flex flex-col items-center">
             {/* Store Logo & Branding */}
             <div className="w-16 h-16 rounded-2xl p-1 bg-white border border-ink-200 shadow-sm overflow-hidden mb-3">
-              <img
-                src={store.logo_url || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=400&q=80'}
-                alt={store.name}
-                className="w-full h-full object-cover rounded-xl"
-              />
+              {store.logo_url ? (
+                <img
+                  src={store.logo_url}
+                  alt={store.name}
+                  className="w-full h-full object-cover rounded-xl"
+                />
+              ) : (
+                <div className="w-full h-full rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-white flex items-center justify-center font-display font-bold text-2xl">
+                  {store.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
 
             <h2 className="font-display font-bold text-2xl text-ink-950 tracking-tight">
@@ -90,12 +120,16 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
 
             {/* QR Code Container */}
             <div className="my-6 p-4 rounded-3xl bg-warm-50 border-2 border-dashed border-ink-200/90 flex flex-col items-center">
-              <div className="p-3 bg-white rounded-2xl shadow-subtle border border-ink-100">
-                <img
-                  src={qrImageUrl}
-                  alt={`QR Code ${store.name}`}
-                  className="w-48 h-48 sm:w-56 sm:h-56 object-contain"
-                />
+              <div className="w-[224px] h-[224px] p-3 bg-white rounded-2xl shadow-subtle border border-ink-100 flex items-center justify-center">
+                {qrImageUrl ? (
+                  <img
+                    src={qrImageUrl}
+                    alt={`QR Code ${store.name}`}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <Loader2 className="w-6 h-6 text-ink-400 animate-spin" />
+                )}
               </div>
 
               <div className="mt-3.5 flex items-center gap-1.5 text-xs font-bold text-ink-900">

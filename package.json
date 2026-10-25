@@ -6,12 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "dev:full": "npm run build && npx wrangler pages dev dist",
+    "deploy": "npm run build && npx wrangler pages deploy dist --project-name=vitrine-express",
+    "db:local": "npx wrangler d1 execute vitrine_express_db --local --file=./schema.sql",
+    "db:remote": "npx wrangler d1 execute vitrine_express_db --remote --file=./schema.sql"
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.474.0",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sonner": "^1.7.4",
@@ -19,6 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.10",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",

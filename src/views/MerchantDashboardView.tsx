@@ -1,26 +1,25 @@
 import React, { useState } from 'react';
 import { Store, Category, Product } from '../types';
-import { dbService } from '../services/db';
+import { dbService, StoreSettingsPayload } from '../services/db';
 import { formatFCFA, formatDate } from '../utils/formatters';
 import { AvailabilityBadge } from '../components/AvailabilityBadge';
 import { AddProductModal } from '../components/AddProductModal';
 import { EditProductModal } from '../components/EditProductModal';
 import { CategoryManagerModal } from '../components/CategoryManagerModal';
 import { QRPosterModal } from '../components/QRPosterModal';
-import { 
-  Plus, 
-  QrCode, 
-  Share2, 
-  Trash2, 
+import { StoreSettingsModal } from '../components/StoreSettingsModal';
+import {
+  Plus,
+  QrCode,
+  Share2,
+  Trash2,
   Edit3,
   Layers,
-  Calendar, 
-  CheckCircle2, 
-  Clock, 
-  AlertTriangle,
+  Settings2,
+  CheckCircle2,
+  Clock,
   ExternalLink,
-  Store as StoreIcon,
-  Sparkles
+  LogOut,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,8 +27,9 @@ interface MerchantDashboardViewProps {
   store: Store;
   categories: Category[];
   products: Product[];
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
   onPreviewStorefront: () => void;
+  onLogout: () => void;
 }
 
 export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
@@ -37,11 +37,13 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
   categories,
   products,
   onRefresh,
-  onPreviewStorefront
+  onPreviewStorefront,
+  onLogout,
 }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [restockModalProduct, setRestockModalProduct] = useState<Product | null>(null);
   const [tempRestockDate, setTempRestockDate] = useState('');
@@ -76,44 +78,77 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
     }
   };
 
+  const handleSaveStoreSettings = async (settings: StoreSettingsPayload) => {
+    const res = await dbService.updateStoreSettings(store.id, settings);
+    if (res.success) {
+      toast.success('Boutique mise à jour !');
+      await onRefresh();
+      return true;
+    }
+
+    toast.error(res.error || "Erreur lors de la mise à jour de la boutique");
+    return false;
+  };
+
   const handleDeleteProduct = async (productId: string) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article de votre vitrine ?")) {
-      await dbService.deleteProduct(productId);
-      toast.success("Article supprimé");
-      onRefresh();
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet article de votre vitrine ?")) {
+      return;
+    }
+
+    const result = await dbService.deleteProduct(productId);
+    if (result.success) {
+      toast.success('Article supprimé');
+      await onRefresh();
+    } else {
+      toast.error(result.error ?? 'Erreur lors de la suppression');
     }
   };
 
   const handleToggleStock = async (product: Product) => {
-    if (product.is_available) {
-      // Passer en indisponible -> demander la date de retour
+    if (Boolean(product.is_available)) {
       setRestockModalProduct(product);
       setTempRestockDate('');
+      return;
+    }
+
+    const result = await dbService.setProductAvailability(product.id, true, null);
+    if (result.success) {
+      toast.success(`${product.name} est de nouveau en stock`);
+      await onRefresh();
     } else {
-      // Passer directement en disponible
-      await dbService.toggleProductAvailability(product.id, null);
-      toast.success(`${product.name} est maintenant marqué 'En stock' !`);
-      onRefresh();
+      toast.error(result.error ?? 'Erreur de mise à jour du stock');
     }
   };
 
   const handleConfirmRestockDate = async () => {
     if (!restockModalProduct) return;
     if (!tempRestockDate) {
-      toast.error("Veuillez choisir une date de réapprovisionnement");
+      toast.error('Veuillez choisir une date de réapprovisionnement');
       return;
     }
 
-    await dbService.toggleProductAvailability(restockModalProduct.id, tempRestockDate);
-    toast.success(`${restockModalProduct.name} marqué 'Arrive le ${formatDate(tempRestockDate)}'`);
-    setRestockModalProduct(null);
-    onRefresh();
+    const result = await dbService.setProductAvailability(
+      restockModalProduct.id,
+      false,
+      tempRestockDate,
+    );
+    if (result.success) {
+      toast.success(`${restockModalProduct.name} arrive le ${formatDate(tempRestockDate)}`);
+      setRestockModalProduct(null);
+      await onRefresh();
+    } else {
+      toast.error(result.error ?? 'Erreur de mise à jour du stock');
+    }
   };
 
-  const handleCopyStoreLink = () => {
-    const url = `${window.location.origin}?store=${store.slug}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Lien copié ! Vous pouvez le coller sur votre statut WhatsApp.");
+  const handleCopyStoreLink = async () => {
+    const url = `${window.location.origin}/boutique/${store.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Lien copié ! Vous pouvez le coller sur votre statut WhatsApp.');
+    } catch {
+      toast.error('Impossible de copier le lien automatiquement.');
+    }
   };
 
   return (
@@ -123,11 +158,17 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
         <div className="bg-white rounded-3xl p-5 sm:p-7 border border-ink-100 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-warm-100 border border-ink-100 p-1 shrink-0 overflow-hidden">
-              <img
-                src={store.logo_url || 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=400&q=80'}
-                alt={store.name}
-                className="w-full h-full object-cover rounded-xl"
-              />
+              {store.logo_url ? (
+                <img
+                  src={store.logo_url}
+                  alt={store.name}
+                  className="w-full h-full object-cover rounded-xl"
+                />
+              ) : (
+                <div className="w-full h-full rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-white flex items-center justify-center font-display font-bold text-2xl">
+                  {store.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -146,6 +187,14 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
 
           {/* Quick Actions */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl border border-brand-200 bg-brand-50 hover:bg-brand-100 text-xs font-semibold text-brand-900 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Settings2 className="w-3.5 h-3.5 text-brand-700" />
+              <span>Ma boutique</span>
+            </button>
+
             <button
               onClick={() => setIsCategoryModalOpen(true)}
               className="px-3.5 py-2 rounded-xl border border-ink-200 hover:bg-warm-100 text-xs font-semibold text-ink-800 flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -171,11 +220,19 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
             </button>
 
             <button
-              onClick={handleCopyStoreLink}
+              onClick={() => void handleCopyStoreLink()}
               className="px-3.5 py-2 rounded-xl border border-ink-200 hover:bg-warm-100 text-xs font-semibold text-ink-800 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Share2 className="w-3.5 h-3.5 text-emerald-600" />
               <span>Copier lien statut WhatsApp</span>
+            </button>
+
+            <button
+              onClick={onLogout}
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-ink-500 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Déconnexion</span>
             </button>
           </div>
         </div>
@@ -208,7 +265,7 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
 
             <p className="text-[11px] text-ink-500">
               {isLimitReached ? (
-                <strong className="text-amber-700">Limite de 20 produits atteinte.</strong>
+                <strong className="text-amber-700">Limite de {maxProducts} produits atteinte.</strong>
               ) : (
                 `Il vous reste ${maxProducts - currentCount} places pour ajouter de nouveaux produits.`
               )}
@@ -277,6 +334,29 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
 
           {/* Product Items List */}
           <div className="divide-y divide-ink-100/80">
+            {products.length === 0 && (
+              <div className="p-10 flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-2xl bg-warm-100 text-ink-400 flex items-center justify-center mb-3">
+                  <Layers className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-semibold text-ink-900">
+                  Votre vitrine est encore vide
+                </p>
+                <p className="text-xs text-ink-500 mt-1 max-w-xs leading-relaxed">
+                  Ajoutez votre premier article pour que vos clients puissent le voir
+                  et vous contacter sur WhatsApp.
+                </p>
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  disabled={isLimitReached}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-ink-950 hover:bg-black text-white text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Ajouter un article
+                </button>
+              </div>
+            )}
+
             {products.map((product) => {
               const isAvailable = Boolean(product.is_available);
 
@@ -314,14 +394,24 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
                     {/* Quick stock switcher button */}
                     <button
                       onClick={() => handleToggleStock(product)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${
                         isAvailable
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-amber-50 hover:text-amber-800 hover:border-amber-200'
                           : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200'
                       }`}
                       title="Changer l'état du stock"
                     >
-                      {isAvailable ? '✓ En rayon' : '⏳ En arrivage'}
+                      {isAvailable ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          En rayon
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3.5 h-3.5" />
+                          En arrivage
+                        </>
+                      )}
                     </button>
 
                     {/* Edit button */}
@@ -367,6 +457,14 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
         onSave={handleUpdateProduct}
         categories={categories}
         store={store}
+      />
+
+      {/* Store Settings Modal */}
+      <StoreSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        store={store}
+        onSave={handleSaveStoreSettings}
       />
 
       {/* Category Manager Modal */}

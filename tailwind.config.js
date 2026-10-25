@@ -11,6 +11,8 @@ export default {
           50: '#F0FDF4',
           100: '#DCFCE7',
           200: '#BBF7D0',
+          300: '#86EFAC',
+          400: '#4ADE80',
           500: '#10B981',
           600: '#059669', // Emerald Commerce Green
           700: '#047857',
@@ -23,7 +25,9 @@ export default {
           800: '#232C37',
           700: '#354150',
           600: '#4B596A',
+          500: '#6B7A8F',
           400: '#8A99AC',
+          300: '#B8C2CE',
           200: '#D5DCE5',
           100: '#ECEFF4',
           50: '#F7F8FA',
@@ -48,9 +52,13 @@ export default {
         display: ['"Outfit"', 'sans-serif'],
       },
       boxShadow: {
+        'xs': '0 1px 2px 0 rgba(15, 23, 42, 0.05)',
         'subtle': '0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.04)',
         'elevated': '0 10px 25px -5px rgba(15, 23, 42, 0.06), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
         'card': '0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -2px rgba(15, 23, 42, 0.03)',
+      },
+      backdropBlur: {
+        xs: '2px',
       },
       borderRadius: {
         '3xl': '1.5rem',

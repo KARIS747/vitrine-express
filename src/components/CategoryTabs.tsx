@@ -32,7 +32,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
             {selectedCategoryId === 'all' && (
               <motion.div
                 layoutId="activeCategoryPill"
-                className="absolute inset-0 bg-ink-900 rounded-xl"
+                className="absolute inset-0 store-primary-bg rounded-xl"
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}
@@ -43,7 +43,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           </button>
 
           {/* Dynamic categories */}
-          {categories.map((cat) => {
+          {categories.filter((cat) => cat.slug !== 'all').map((cat) => {
             const isSelected = selectedCategoryId === cat.id;
             return (
               <button
@@ -58,7 +58,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
                 {isSelected && (
                   <motion.div
                     layoutId="activeCategoryPill"
-                    className="absolute inset-0 bg-ink-900 rounded-xl"
+                    className="absolute inset-0 store-primary-bg rounded-xl"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}

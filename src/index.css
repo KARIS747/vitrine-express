@@ -37,3 +37,43 @@
     border: none !important;
   }
 }
+
+/* Storefront theme tokens */
+.store-themed {
+  --store-primary: #059669;
+  --store-accent: #f59e0b;
+}
+
+.store-primary-bg {
+  background-color: var(--store-primary);
+}
+
+.store-primary-bg:hover {
+  filter: brightness(0.92);
+}
+
+.store-primary-text {
+  color: var(--store-primary);
+}
+
+.store-primary-soft {
+  background-color: color-mix(in srgb, var(--store-primary) 10%, white);
+  color: var(--store-primary);
+  border-color: color-mix(in srgb, var(--store-primary) 30%, white);
+}
+
+.store-primary-soft:hover {
+  background-color: color-mix(in srgb, var(--store-primary) 16%, white);
+}
+
+.store-brand-gradient {
+  background-image: linear-gradient(135deg, var(--store-primary), var(--store-accent));
+}
+
+.store-title-hover {
+  transition: color 0.15s ease;
+}
+
+.group:hover .store-title-hover {
+  color: var(--store-primary);
+}

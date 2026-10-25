@@ -1,79 +1,71 @@
 // Cloudflare Pages Function: POST /api/merchant/login
-// Authentification du boutiquier avec sa licence et son code PIN
+// Authentification du boutiquier avec sa clé de licence (ou son slug) et son code PIN.
 
-interface Env {
-  DB: any;
-}
+import {
+  authenticateMerchantLogin,
+  json,
+  type SecurityEnv,
+} from "../../_lib/security";
+
+type Env = SecurityEnv;
+
+const publicStore = (store: any) => ({
+  id: store.id,
+  slug: store.slug,
+  name: store.name,
+  tagline: store.tagline,
+  description: store.description,
+  whatsapp_number: store.whatsapp_number,
+  phone_call: store.phone_call,
+  city: store.city,
+  quarter: store.quarter,
+  address_notes: store.address_notes,
+  logo_url: store.logo_url,
+  banner_url: store.banner_url,
+  theme_primary: store.theme_primary,
+  theme_accent: store.theme_accent,
+  max_products: store.max_products,
+  expires_at: store.expires_at,
+  is_active: store.is_active,
+  created_at: store.created_at,
+});
 
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
   const db = context.env.DB;
-  if (!db) {
-    return new Response(JSON.stringify({ error: "Base de données non configurée" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
+  if (!db) return json({ error: "Base de données non configurée" }, 500);
 
   try {
     const { licenseKey, pinCode } = await context.request.json() as any;
+    const identifier = String(licenseKey ?? "").trim();
+    const pin = String(pinCode ?? "").trim();
 
-    if (!licenseKey || !pinCode) {
-      return new Response(JSON.stringify({ error: "Clé de licence et code PIN obligatoires" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" }
-      });
+    if (!identifier || !pin) {
+      return json({ error: "Clé de licence (ou identifiant boutique) et code PIN obligatoires" }, 400);
     }
 
-    const store = await db
-      .prepare(`SELECT * FROM stores WHERE (license_key = ? OR slug = ?) AND pin_code = ?`)
-      .bind(licenseKey.trim(), licenseKey.trim().toLowerCase(), pinCode.trim())
-      .first();
+    const auth = await authenticateMerchantLogin(
+      db,
+      context.request,
+      identifier,
+      pin,
+      context.env.PIN_PEPPER ?? "",
+    );
+    if (auth.response) return auth.response;
+    const store = auth.store;
 
-    if (!store) {
-      return new Response(JSON.stringify({ error: "Identifiants invalides" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    if (store.is_active === 0) {
-      return new Response(JSON.stringify({ error: "Cette boutique a été suspendue par l'administrateur" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    // Récupérer le nombre de produits actuels
     const countResult = await db
-      .prepare(`SELECT COUNT(*) as total FROM products WHERE store_id = ?`)
+      .prepare(`SELECT COUNT(*) AS total FROM products WHERE store_id = ?`)
       .bind(store.id)
       .first();
 
-    const currentProductCount = countResult ? countResult.total : 0;
-
-    return new Response(JSON.stringify({
+    return json({
       success: true,
       store: {
-        id: store.id,
-        slug: store.slug,
-        name: store.name,
-        tagline: store.tagline,
-        whatsapp_number: store.whatsapp_number,
-        city: store.city,
-        quarter: store.quarter,
-        max_products: store.max_products,
-        expires_at: store.expires_at,
-        currentProductCount
-      }
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
+        ...publicStore(store),
+        current_products_count: countResult ? Number(countResult.total) : 0,
+      },
     });
-
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    return json({ error: err.message || "Erreur serveur" }, 500);
   }
 };

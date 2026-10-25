@@ -25,8 +25,8 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   }[size];
 
   const variantClasses = {
-    primary: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-700/20 active:bg-emerald-800',
-    secondary: 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/80 active:bg-emerald-200/60',
+    primary: 'store-primary-bg text-white shadow-sm active:opacity-90',
+    secondary: 'store-primary-soft border active:opacity-90',
     outline: 'bg-white text-ink-900 border border-ink-200 hover:bg-warm-100 hover:border-ink-300'
   }[variant];
 

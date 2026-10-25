@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Store, Category, Product } from '../types';
 import { StoreHeader } from '../components/StoreHeader';
 import { CategoryTabs } from '../components/CategoryTabs';
 import { ProductCard } from '../components/ProductCard';
 import { ProductModal } from '../components/ProductModal';
 import { QRPosterModal } from '../components/QRPosterModal';
-import { Search, Sparkles, AlertCircle, ShoppingBag, ArrowUpDown } from 'lucide-react';
+import { Search, ShoppingBag, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StorefrontViewProps {
@@ -13,18 +13,25 @@ interface StorefrontViewProps {
   categories: Category[];
   products: Product[];
   searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
 export const StorefrontView: React.FC<StorefrontViewProps> = ({
   store,
   categories,
   products,
-  searchQuery
+  searchQuery,
+  onSearchChange,
 }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [filterStockOnly, setFilterStockOnly] = useState(false);
+
+  useEffect(() => {
+    setSelectedCategoryId('all');
+    setFilterStockOnly(false);
+  }, [store.id]);
 
   // Filter products by search query, category, and availability
   const filteredProducts = useMemo(() => {
@@ -66,7 +73,13 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-warm-50 flex flex-col pb-20">
+    <div
+      className="store-themed min-h-[calc(100vh-3.5rem)] bg-warm-50 flex flex-col pb-20"
+      style={{
+        '--store-primary': store.theme_primary || '#059669',
+        '--store-accent': store.theme_accent || '#F59E0B',
+      } as React.CSSProperties}
+    >
       {/* Store Header & Presentation */}
       <StoreHeader
         store={store}
@@ -84,6 +97,26 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
 
       {/* Main Content Area */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 w-full mt-4 sm:mt-6 flex-1">
+        <div className="sm:hidden mb-3 relative">
+          <Search className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="search"
+            placeholder="Rechercher un article..."
+            value={searchQuery}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-ink-200 text-sm outline-none bg-white focus:border-ink-400"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-400 hover:text-ink-700 cursor-pointer"
+              aria-label="Effacer la recherche"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
         {/* Availability & Sub-filters strip */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
           <div className="flex items-center gap-2 text-xs text-ink-600">
@@ -107,13 +140,14 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
           {/* Quick toggle: show only available */}
           <button
             onClick={() => setFilterStockOnly(!filterStockOnly)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
               filterStockOnly
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                 : 'bg-white text-ink-600 border-ink-200 hover:bg-warm-100'
             }`}
           >
-            {filterStockOnly ? '✓ Uniquement disponibles en stock' : 'Filtrer : En stock uniquement'}
+            {filterStockOnly && <Check className="w-3.5 h-3.5" />}
+            {filterStockOnly ? 'En stock uniquement' : 'Filtrer : En stock uniquement'}
           </button>
         </div>
 
@@ -147,6 +181,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
                 onClick={() => {
                   setSelectedCategoryId('all');
                   setFilterStockOnly(false);
+                  onSearchChange('');
                 }}
                 className="mt-4 px-4 py-2 rounded-xl bg-ink-900 text-white text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
               >

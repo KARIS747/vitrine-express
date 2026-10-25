@@ -15,7 +15,8 @@ export interface CompressionResult {
 export async function compressProductImage(
   file: File,
   maxDimension = 1000,
-  quality = 0.82
+  quality = 0.82,
+  mimeType: 'image/jpeg' | 'image/png' = 'image/jpeg'
 ): Promise<CompressionResult> {
   const originalSizeKB = Math.round(file.size / 1024);
 
@@ -53,11 +54,10 @@ export async function compressProductImage(
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Export en JPEG optimisé
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
-        
-        // Calcul taille approximative du Base64
-        const stringLength = dataUrl.length - 'data:image/jpeg;base64,'.length;
+        const dataUrl = canvas.toDataURL(mimeType, quality);
+
+        const prefix = `data:${mimeType};base64,`;
+        const stringLength = dataUrl.length - prefix.length;
         const sizeInBytes = 4 * Math.ceil(stringLength / 3) * 0.5624896334383;
         const compressedSizeKB = Math.round(sizeInBytes / 1024);
 
@@ -77,4 +77,17 @@ export async function compressProductImage(
     reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
     reader.readAsDataURL(file);
   });
+}
+
+export async function compressStoreImage(
+  file: File,
+  kind: 'logo' | 'banner'
+): Promise<CompressionResult> {
+  const usePng = kind === 'logo' && file.type === 'image/png';
+  return compressProductImage(
+    file,
+    kind === 'logo' ? 700 : 1600,
+    kind === 'logo' ? 0.9 : 0.8,
+    usePng ? 'image/png' : 'image/jpeg'
+  );
 }

@@ -1,398 +1,574 @@
-import { Store, Product, Category, License } from '../types';
+import { Store, Product, Category } from '../types';
 
-// Données initiales riches représentant des commerces réels au Cameroun
-const INITIAL_STORES: Store[] = [
-  {
-    id: 'store_1',
-    slug: 'kamer-kicks',
-    name: 'Kamer Kicks Akwa',
-    tagline: 'Sneakers originales & streetwear importé',
-    description: 'Boutique spécialisée dans la vente de baskets de marques certifiées. Livraison express à Douala & Yaoundé en moins de 24h.',
-    whatsapp_number: '237699123456',
-    phone_call: '+237 699 12 34 56',
-    city: 'Douala',
-    quarter: 'Akwa (Face Saker)',
-    address_notes: 'Rue Castelnau, Immeuble Rose 1er étage',
-    logo_url: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=400&q=80',
-    banner_url: 'https://images.unsplash.com/photo-1556906781-9a412961c28c?auto=format&fit=crop&w=1200&q=80',
-    license_key: 'LIC-KK-2026-99',
-    pin_code: '1234',
-    max_products: 20, // Strict cap: 20 produits pour 5000 FCFA/an
-    expires_at: new Date(Date.now() + 315 * 24 * 3600 * 1000).toISOString(),
-    is_active: 1,
-    current_products_count: 5
-  },
-  {
-    id: 'store_2',
-    slug: 'glamour-chic',
-    name: 'Glamour Chic Bonapriso',
-    tagline: 'Prêt-à-porter féminin, sacs & parfums de luxe',
-    description: 'La touche délégance pour la femme active de Douala. Arrivages hebdomadaires dEurope et de Dubaï.',
-    whatsapp_number: '237677987654',
-    phone_call: '+237 677 98 76 54',
-    city: 'Douala',
-    quarter: 'Bonapriso',
-    address_notes: 'Avenue de Gaulle',
-    logo_url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80',
-    banner_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80',
-    license_key: 'LIC-GC-2026-44',
-    pin_code: '0000',
-    max_products: 20,
-    expires_at: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString(),
-    is_active: 1,
-    current_products_count: 3
+// ============================================================
+//  dbService — API Cloudflare Pages + D1
+//  Aucune donnée métier n'est stockée dans le navigateur.
+// ============================================================
+
+const API_BASE = '/api';
+
+export interface MerchantSession {
+  storeId: string;
+  storeSlug: string;
+  licenseKey: string;
+  pinCode: string;
+}
+
+export interface ApiResult<T = undefined> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
+
+export interface CreatedStoreAccess {
+  store: Store;
+  licenseKey: string;
+  pinCode: string;
+  expiresAt: string;
+}
+
+export interface StoreSettingsPayload {
+  name: string;
+  tagline: string;
+  description: string;
+  whatsappNumber: string;
+  phoneCall: string;
+  city: string;
+  quarter: string;
+  addressNotes: string;
+  logoUrl: string;
+  bannerUrl: string;
+  themePrimary: string;
+  themeAccent: string;
+}
+
+function readStorage(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
   }
-];
+}
 
-const INITIAL_CATEGORIES: Category[] = [
-  { id: 'cat_all', store_id: 'store_1', name: 'Tous les modèles', slug: 'all', sort_order: 0 },
-  { id: 'cat_nike', store_id: 'store_1', name: 'Nike & Jordan', slug: 'nike', sort_order: 1 },
-  { id: 'cat_yeezy', store_id: 'store_1', name: 'Yeezy & Adidas', slug: 'yeezy', sort_order: 2 },
-  { id: 'cat_running', store_id: 'store_1', name: 'Running & Lifestyle', slug: 'running', sort_order: 3 },
-  
-  { id: 'cat_g_all', store_id: 'store_2', name: 'Tout voir', slug: 'all', sort_order: 0 },
-  { id: 'cat_g_robes', store_id: 'store_2', name: 'Robes & Ensembles', slug: 'robes', sort_order: 1 },
-  { id: 'cat_g_sacs', store_id: 'store_2', name: 'Sacs à main', slug: 'sacs', sort_order: 2 },
-];
-
-const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: 'prod_1',
-    store_id: 'store_1',
-    category_id: 'cat_nike',
-    name: 'Nike Dunk Low Retro Panda',
-    description: 'La paire la plus demandée. Coloris noir et blanc sobre, cuir pleine fleur. Idéale pour le quotidien. Tailles disponibles : 40, 41, 42, 43, 44.',
-    price: 38000,
-    image_url: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=800&q=80',
-    is_available: true,
-    restock_date: null,
-    is_featured: true,
-    sort_order: 1
-  },
-  {
-    id: 'prod_2',
-    store_id: 'store_1',
-    category_id: 'cat_nike',
-    name: 'Air Jordan 1 High OG Chicago',
-    description: 'Légende absolue du basketball. Cuir rouge vif, col montant matelassé. Arrivage spécial Dubaï en cours de dédouanement au port de Douala.',
-    price: 65000,
-    image_url: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=800&q=80',
-    is_available: false,
-    restock_date: '2026-11-06',
-    is_featured: true,
-    sort_order: 2
-  },
-  {
-    id: 'prod_3',
-    store_id: 'store_1',
-    category_id: 'cat_yeezy',
-    name: 'Adidas Yeezy Boost 350 V2 Bone',
-    description: 'Semelle Boost originale ultra moelleuse. Tige respirante parfaite pour le climat tropical. Tailles : 41 à 45.',
-    price: 45000,
-    image_url: 'https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?auto=format&fit=crop&w=800&q=80',
-    is_available: true,
-    restock_date: null,
-    is_featured: false,
-    sort_order: 3
-  },
-  {
-    id: 'prod_4',
-    store_id: 'store_1',
-    category_id: 'cat_running',
-    name: 'New Balance 9060 Triple Black',
-    description: 'Look futuriste volumineux avec amorti ABZORB. Très prisée pour les sorties branchées du week-end.',
-    price: 42000,
-    image_url: 'https://images.unsplash.com/photo-1539185441755-769473a23570?auto=format&fit=crop&w=800&q=80',
-    is_available: false,
-    restock_date: '2026-11-15',
-    is_featured: false,
-    sort_order: 4
-  },
-  {
-    id: 'prod_5',
-    store_id: 'store_1',
-    category_id: 'cat_running',
-    name: 'Asics Gel-Kayano 14 Metallic Silver',
-    description: 'Esthétique rétro runner années 2000. Amorti gel complet, maintien optimal de la voûte plantaire.',
-    price: 39000,
-    image_url: 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?auto=format&fit=crop&w=800&q=80',
-    is_available: true,
-    restock_date: null,
-    is_featured: false,
-    sort_order: 5
-  },
-  
-  // Boutique 2
-  {
-    id: 'prod_g1',
-    store_id: 'store_2',
-    category_id: 'cat_g_robes',
-    name: 'Robe Fourreau Satin Terracotta',
-    description: 'Tissu satiné haute brillance, coupe flatteuse ceinturée à la taille. Idéale pour mariages et soirées.',
-    price: 25000,
-    image_url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
-    is_available: true,
-    restock_date: null,
-    is_featured: true,
-    sort_order: 1
-  },
-  {
-    id: 'prod_g2',
-    store_id: 'store_2',
-    category_id: 'cat_g_sacs',
-    name: 'Sac Cabas Cuir Grainé Caramel',
-    description: 'Cuir véritable italien avec bandoulière réglable et fermoir doré. Finition irréprochable.',
-    price: 32000,
-    image_url: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80',
-    is_available: false,
-    restock_date: '2026-11-02',
-    is_featured: true,
-    sort_order: 2
+function writeStorage(key: string, value: string) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // sessionStorage peut être indisponible (navigation privée restrictive).
   }
-];
+}
 
-// Gestionnaire de stockage local réactif avec synchronisation Cloudflare D1
+function removeStorage(key: string) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
+async function parseJson(response: Response): Promise<any> {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: "Réponse serveur invalide" };
+  }
+}
+
+function loadMerchantSession(): MerchantSession | null {
+  try {
+    const raw = readStorage('ve_merchant_session');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.storeId || !parsed?.storeSlug || !parsed?.licenseKey || !parsed?.pinCode) {
+      removeStorage('ve_merchant_session');
+      return null;
+    }
+    return {
+      storeId: String(parsed.storeId),
+      storeSlug: String(parsed.storeSlug),
+      licenseKey: String(parsed.licenseKey),
+      pinCode: String(parsed.pinCode),
+    };
+  } catch {
+    return null;
+  }
+}
+
 class DatabaseService {
-  private stores: Store[];
-  private categories: Category[];
-  private products: Product[];
+  private adminKey: string | null = readStorage('ve_admin_key');
+  private merchantSession: MerchantSession | null = loadMerchantSession();
 
-  constructor() {
-    this.stores = this.loadFromStorage('ve_stores', INITIAL_STORES);
-    this.categories = this.loadFromStorage('ve_categories', INITIAL_CATEGORIES);
-    this.products = this.loadFromStorage('ve_products', INITIAL_PRODUCTS);
+  // ----------------------------------------------------------
+  //  SESSIONS
+  // ----------------------------------------------------------
+
+  setAdminKey(key: string) {
+    this.adminKey = key;
+    writeStorage('ve_admin_key', key);
   }
 
-  private loadFromStorage<T>(key: string, fallback: T): T {
-    try {
-      const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : fallback;
-    } catch {
-      return fallback;
-    }
+  getAdminKey(): string | null {
+    return this.adminKey;
   }
 
-  private saveToStorage(key: string, data: any) {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.warn("Storage full or disabled", e);
-    }
+  clearAdminKey() {
+    this.adminKey = null;
+    removeStorage('ve_admin_key');
   }
 
-  // --- BOUTIQUES ---
-  async getStoreBySlug(slug: string): Promise<{ store: Store; categories: Category[]; products: Product[] } | null> {
-    const store = this.stores.find(s => s.slug.toLowerCase() === slug.toLowerCase() && s.is_active);
-    if (!store) return null;
-
-    const categories = this.categories.filter(c => c.store_id === store.id);
-    const products = this.products.filter(p => p.store_id === store.id);
-
-    return { store, categories, products };
+  setMerchantSession(storeId: string, storeSlug: string, licenseKey: string, pinCode: string) {
+    this.merchantSession = { storeId, storeSlug, licenseKey, pinCode };
+    writeStorage('ve_merchant_session', JSON.stringify(this.merchantSession));
   }
+
+  getMerchantSession(): MerchantSession | null {
+    return this.merchantSession;
+  }
+
+  clearMerchantSession() {
+    this.merchantSession = null;
+    removeStorage('ve_merchant_session');
+  }
+
+  // ----------------------------------------------------------
+  //  VITRINE PUBLIQUE
+  // ----------------------------------------------------------
 
   async getAllStores(): Promise<Store[]> {
-    return this.stores.map(store => {
-      const count = this.products.filter(p => p.store_id === store.id).length;
-      return { ...store, current_products_count: count };
-    });
-  }
-
-  async merchantLogin(slugOrKey: string, pin: string): Promise<Store | null> {
-    const cleanKey = slugOrKey.trim().toLowerCase();
-    const cleanPin = pin.trim();
-
-    const store = this.stores.find(
-      s => (s.license_key.toLowerCase() === cleanKey || s.slug.toLowerCase() === cleanKey) &&
-           s.pin_code === cleanPin
-    );
-
-    if (!store) return null;
-    const count = this.products.filter(p => p.store_id === store.id).length;
-    return { ...store, current_products_count: count };
-  }
-
-  // --- GESTION DES PRODUITS (AVEC VÉRIFICATION STRICTE DU QUOTA 20 PRODUITS) ---
-  async getStoreProducts(storeId: string): Promise<Product[]> {
-    return this.products.filter(p => p.store_id === storeId);
-  }
-
-  // --- GESTION DES CATÉGORIES PAR LE BOUTIQUIER ---
-  async getCategories(storeId: string): Promise<Category[]> {
-    return this.categories.filter(c => c.store_id === storeId);
-  }
-
-  async addCategory(storeId: string, name: string): Promise<{ success: boolean; category?: Category; error?: string }> {
-    const cleanName = name.trim();
-    if (!cleanName) return { success: false, error: "Nom de catégorie invalide" };
-
-    const cleanSlug = cleanName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-
-    const existing = this.categories.find(
-      c => c.store_id === storeId && c.name.toLowerCase() === cleanName.toLowerCase()
-    );
-    if (existing) {
-      return { success: false, error: "Cette catégorie existe déjà" };
+    try {
+      const res = await fetch(`${API_BASE}/stores`);
+      const data = await parseJson(res);
+      if (!res.ok) return [];
+      return Array.isArray(data) ? data : (data.stores ?? []);
+    } catch {
+      return [];
     }
-
-    const newCategory: Category = {
-      id: 'cat_' + Date.now().toString(36),
-      store_id: storeId,
-      name: cleanName,
-      slug: cleanSlug,
-      sort_order: this.categories.filter(c => c.store_id === storeId).length + 1
-    };
-
-    this.categories.push(newCategory);
-    this.saveToStorage('ve_categories', this.categories);
-    return { success: true, category: newCategory };
   }
 
-  async deleteCategory(categoryId: string): Promise<boolean> {
-    this.categories = this.categories.filter(c => c.id !== categoryId);
-    // Dissocier les produits de cette catégorie
-    this.products = this.products.map(p => 
-      p.category_id === categoryId ? { ...p, category_id: null } : p
-    );
-    this.saveToStorage('ve_categories', this.categories);
-    this.saveToStorage('ve_products', this.products);
-    return true;
-  }
-
-  async addProduct(storeId: string, productData: Omit<Product, 'id' | 'store_id' | 'created_at'>): Promise<{ success: boolean; product?: Product; error?: string }> {
-    const store = this.stores.find(s => s.id === storeId);
-    if (!store) return { success: false, error: "Boutique introuvable" };
-
-    const currentCount = this.products.filter(p => p.store_id === storeId).length;
-    const maxAllowed = store.max_products || 20;
-
-    // VÉRIFICATION DE LA LIMITE SOUSCRITE
-    if (currentCount >= maxAllowed) {
+  async getStoreBySlug(slug: string): Promise<{ store: Store; categories: Category[]; products: Product[] } | null> {
+    try {
+      const res = await fetch(`${API_BASE}/stores/${encodeURIComponent(slug)}`);
+      const data = await parseJson(res);
+      if (!res.ok || data.error) return null;
       return {
-        success: false,
-        error: `Limite atteinte : vous avez atteint le maximum de ${maxAllowed} produits pour votre licence à 5 000 FCFA/an. Contactez Karis pour augmenter votre quota !`
+        store: data.store,
+        categories: data.categories ?? [],
+        products: data.products ?? [],
       };
+    } catch {
+      return null;
     }
+  }
 
-    const newProduct: Product = {
-      ...productData,
-      id: 'prod_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
-      store_id: storeId,
-      created_at: new Date().toISOString()
-    };
+  // ----------------------------------------------------------
+  //  AUTHENTIFICATION BOUTIQUIER
+  // ----------------------------------------------------------
 
-    this.products.unshift(newProduct);
-    this.saveToStorage('ve_products', this.products);
-    return { success: true, product: newProduct };
+  async loginMerchant(licenseKey: string, pinCode: string): Promise<{ success: boolean; store?: Store; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/merchant/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseKey, pinCode }),
+      });
+      const data = await parseJson(res);
+      if (!res.ok || !data.success || !data.store) {
+        return { success: false, error: data.error ?? 'Identifiants invalides' };
+      }
+
+      this.setMerchantSession(
+        data.store.id,
+        data.store.slug,
+        licenseKey.trim(),
+        pinCode.trim(),
+      );
+
+      return { success: true, store: data.store };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
+
+  // ----------------------------------------------------------
+  //  BOUTIQUE (boutiquier authentifié)
+  // ----------------------------------------------------------
+
+  async updateStoreSettings(
+    storeId: string,
+    settings: StoreSettingsPayload
+  ): Promise<{ success: boolean; store?: Store; error?: string }> {
+    const session = this.getMerchantSession();
+    if (!session) return { success: false, error: 'Session expirée, reconnectez-vous' };
+
+    try {
+      const res = await fetch(`${API_BASE}/merchant/store`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId,
+          licenseKey: session.licenseKey,
+          pinCode: session.pinCode,
+          settings,
+        }),
+      });
+      const data = await parseJson(res);
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error ?? 'Erreur lors de la mise à jour de la boutique' };
+      }
+      return { success: true, store: data.store };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
+
+  // ----------------------------------------------------------
+  //  PRODUITS (boutiquier authentifié)
+  // ----------------------------------------------------------
+
+  async addProduct(
+    storeId: string,
+    productData: Omit<Product, 'id' | 'store_id' | 'created_at'>
+  ): Promise<{ success: boolean; product?: Product; error?: string }> {
+    const session = this.getMerchantSession();
+    if (!session) return { success: false, error: 'Session expirée, reconnectez-vous' };
+
+    try {
+      const res = await fetch(`${API_BASE}/merchant/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId,
+          licenseKey: session.licenseKey,
+          pinCode: session.pinCode,
+          product: {
+            name: productData.name,
+            description: productData.description,
+            price: productData.price,
+            imageUrl: productData.image_url,
+            categoryId: productData.category_id,
+            isAvailable: productData.is_available,
+            restockDate: productData.restock_date,
+            isFeatured: productData.is_featured,
+            sortOrder: productData.sort_order,
+          },
+        }),
+      });
+      const data = await parseJson(res);
+      if (!res.ok) return { success: false, error: data.error ?? "Erreur lors de l'ajout" };
+      return { success: true, product: data.product };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
   }
 
   async updateProduct(product: Product): Promise<{ success: boolean; error?: string }> {
-    const idx = this.products.findIndex(p => p.id === product.id);
-    if (idx === -1) return { success: false, error: "Produit non trouvé" };
+    const session = this.getMerchantSession();
+    if (!session) return { success: false, error: 'Session expirée' };
 
-    this.products[idx] = { ...this.products[idx], ...product };
-    this.saveToStorage('ve_products', this.products);
-    return { success: true };
+    try {
+      const res = await fetch(`${API_BASE}/merchant/products`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: session.storeId,
+          licenseKey: session.licenseKey,
+          pinCode: session.pinCode,
+          product: {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            imageUrl: product.image_url,
+            categoryId: product.category_id,
+            isAvailable: product.is_available,
+            restockDate: product.restock_date,
+            isFeatured: product.is_featured,
+            sortOrder: product.sort_order,
+          },
+        }),
+      });
+      const data = await parseJson(res);
+      return res.ok
+        ? { success: true }
+        : { success: false, error: data.error ?? 'Erreur lors de la mise à jour' };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
   }
 
-  async deleteProduct(productId: string): Promise<boolean> {
-    this.products = this.products.filter(p => p.id !== productId);
-    this.saveToStorage('ve_products', this.products);
-    return true;
+  async setProductAvailability(
+    productId: string,
+    isAvailable: boolean,
+    restockDate?: string | null,
+  ): Promise<{ success: boolean; product?: Product; error?: string }> {
+    const session = this.getMerchantSession();
+    if (!session) return { success: false, error: 'Session expirée' };
+
+    try {
+      const res = await fetch(`${API_BASE}/merchant/products`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: session.storeId,
+          licenseKey: session.licenseKey,
+          pinCode: session.pinCode,
+          product: {
+            id: productId,
+            toggleAvailability: true,
+            isAvailable,
+            restockDate: isAvailable ? null : (restockDate ?? null),
+          },
+        }),
+      });
+      const data = await parseJson(res);
+      if (!res.ok) return { success: false, error: data.error ?? 'Erreur de mise à jour du stock' };
+      return { success: true, product: data.product };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
   }
 
-  async toggleProductAvailability(productId: string, restockDate?: string | null): Promise<boolean> {
-    const product = this.products.find(p => p.id === productId);
-    if (!product) return false;
+  async deleteProduct(productId: string): Promise<{ success: boolean; error?: string }> {
+    const session = this.getMerchantSession();
+    if (!session) return { success: false, error: 'Session expirée' };
 
-    const newAvailable = !product.is_available;
-    product.is_available = newAvailable;
-    product.restock_date = newAvailable ? null : (restockDate || null);
-
-    this.saveToStorage('ve_products', this.products);
-    return true;
+    try {
+      const res = await fetch(`${API_BASE}/merchant/products`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: session.storeId,
+          licenseKey: session.licenseKey,
+          pinCode: session.pinCode,
+          productId,
+        }),
+      });
+      const data = await parseJson(res);
+      return res.ok
+        ? { success: true }
+        : { success: false, error: data.error ?? 'Erreur lors de la suppression' };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
   }
 
-  // --- KARIS LICENSE MANAGER (SUPER ADMIN) ---
+  // ----------------------------------------------------------
+  //  CATÉGORIES (boutiquier authentifié)
+  // ----------------------------------------------------------
+
+  async addCategory(storeId: string, name: string): Promise<{ success: boolean; category?: Category; error?: string }> {
+    const session = this.getMerchantSession();
+    if (!session) return { success: false, error: 'Session expirée' };
+
+    try {
+      const res = await fetch(`${API_BASE}/merchant/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId,
+          licenseKey: session.licenseKey,
+          pinCode: session.pinCode,
+          name,
+        }),
+      });
+      const data = await parseJson(res);
+      if (!res.ok) return { success: false, error: data.error ?? "Erreur d'ajout" };
+      return { success: true, category: data.category };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
+
+  async deleteCategory(storeId: string, categoryId: string): Promise<{ success: boolean; error?: string }> {
+    const session = this.getMerchantSession();
+    if (!session) return { success: false, error: 'Session expirée' };
+
+    try {
+      const res = await fetch(`${API_BASE}/merchant/categories`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: storeId || session.storeId,
+          licenseKey: session.licenseKey,
+          pinCode: session.pinCode,
+          categoryId,
+        }),
+      });
+      const data = await parseJson(res);
+      return res.ok
+        ? { success: true }
+        : { success: false, error: data.error ?? 'Erreur lors de la suppression' };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
+
+  // ----------------------------------------------------------
+  //  ADMIN KARIS
+  // ----------------------------------------------------------
+
+  async loginAdmin(key: string): Promise<{ success: boolean; stores?: Store[]; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/licenses`, {
+        headers: { 'X-Admin-Key': key },
+      });
+      const data = await parseJson(res);
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error ?? 'Clé administrateur invalide' };
+      }
+      this.setAdminKey(key);
+      return { success: true, stores: data.stores ?? [] };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
+
+  async getAdminStores(): Promise<{ success: boolean; stores: Store[]; error?: string }> {
+    const key = this.getAdminKey();
+    if (!key) return { success: false, stores: [], error: 'Clé administrateur absente' };
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/licenses`, {
+        headers: { 'X-Admin-Key': key },
+      });
+      const data = await parseJson(res);
+      if (res.status === 401) {
+        this.clearAdminKey();
+        return { success: false, stores: [], error: data.error ?? 'Session administrateur expirée' };
+      }
+      if (!res.ok) {
+        return { success: false, stores: [], error: data.error ?? 'Erreur de chargement' };
+      }
+      return { success: true, stores: data.stores ?? [] };
+    } catch {
+      return { success: false, stores: [], error: 'Erreur réseau' };
+    }
+  }
+
+  async getAllStoresAdmin(): Promise<Store[]> {
+    const result = await this.getAdminStores();
+    return result.stores;
+  }
+
   async createStoreByAdmin(params: {
     name: string;
     slug?: string;
     whatsappNumber: string;
+    phoneCall?: string;
     city: string;
     quarter?: string;
     pinCode?: string;
     maxProducts?: number;
     durationMonths?: number;
-  }): Promise<Store> {
-    const cleanSlug = (params.slug || params.name)
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+  }): Promise<CreatedStoreAccess> {
+    const key = this.getAdminKey();
+    if (!key) throw new Error('Clé administrateur absente. Reconnectez-vous.');
 
-    const storeId = 'store_' + Date.now().toString(36);
-    const licenseKey = 'LIC-' + cleanSlug.substring(0, 4).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
+    const res = await fetch(`${API_BASE}/admin/licenses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Key': key,
+      },
+      body: JSON.stringify({
+        storeName: params.name,
+        slug: params.slug,
+        whatsappNumber: params.whatsappNumber,
+        phoneCall: params.phoneCall,
+        city: params.city,
+        quarter: params.quarter,
+        pinCode: params.pinCode ?? '',
+        maxProducts: params.maxProducts ?? 20,
+        durationMonths: params.durationMonths ?? 12,
+      }),
+    });
 
-    const expiresDate = new Date();
-    expiresDate.setMonth(expiresDate.getMonth() + (params.durationMonths || 12));
+    const data = await parseJson(res);
+    if (!res.ok || !data.success || !data.store) {
+      if (res.status === 401) {
+        this.clearAdminKey();
+      }
+      throw new Error(data.error ?? 'Erreur création boutique');
+    }
 
-    const newStore: Store = {
-      id: storeId,
-      slug: cleanSlug,
-      name: params.name.trim(),
-      whatsapp_number: params.whatsappNumber.replace(/[^0-9]/g, ''),
-      phone_call: params.whatsappNumber,
-      city: params.city || 'Douala',
-      quarter: params.quarter || '',
-      license_key: licenseKey,
-      pin_code: params.pinCode || '1234',
-      max_products: params.maxProducts || 20,
-      expires_at: expiresDate.toISOString(),
-      is_active: 1,
-      current_products_count: 0
+    return {
+      store: data.store,
+      licenseKey: data.licenseKey,
+      pinCode: data.pinCode,
+      expiresAt: data.expiresAt,
     };
-
-    this.stores.unshift(newStore);
-    this.saveToStorage('ve_stores', this.stores);
-
-    // Ajouter catégorie par défaut
-    const defaultCat: Category = {
-      id: 'cat_' + Date.now().toString(36),
-      store_id: storeId,
-      name: 'Tous les articles',
-      slug: 'all',
-      sort_order: 0
-    };
-    this.categories.push(defaultCat);
-    this.saveToStorage('ve_categories', this.categories);
-
-    return newStore;
   }
 
-  async toggleStoreStatus(storeId: string): Promise<boolean> {
-    const store = this.stores.find(s => s.id === storeId);
-    if (!store) return false;
-    store.is_active = store.is_active ? 0 : 1;
-    this.saveToStorage('ve_stores', this.stores);
-    return true;
+  async toggleStoreStatus(storeId: string): Promise<{ success: boolean; store?: Store; error?: string }> {
+    const key = this.getAdminKey();
+    if (!key) return { success: false, error: 'Clé administrateur absente' };
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/licenses`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Key': key,
+        },
+        body: JSON.stringify({ storeId, action: 'toggleStatus' }),
+      });
+      const data = await parseJson(res);
+      return res.ok
+        ? { success: true, store: data.store }
+        : { success: false, error: data.error ?? 'Erreur de mise à jour' };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
   }
 
-  async renewStoreLicense(storeId: string, additionalMonths = 12): Promise<Store | null> {
-    const store = this.stores.find(s => s.id === storeId);
-    if (!store) return null;
+  async resetStorePin(storeId: string): Promise<{ success: boolean; store?: Store; pinCode?: string; error?: string }> {
+    const key = this.getAdminKey();
+    if (!key) return { success: false, error: 'Clé administrateur absente' };
 
-    const currentExpiry = new Date(store.expires_at).getTime();
-    const baseDate = currentExpiry > Date.now() ? new Date(store.expires_at) : new Date();
-    baseDate.setMonth(baseDate.getMonth() + additionalMonths);
+    try {
+      const res = await fetch(`${API_BASE}/admin/licenses`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Key': key,
+        },
+        body: JSON.stringify({ storeId, action: 'resetPin' }),
+      });
+      const data = await parseJson(res);
+      if (res.status === 401) {
+        this.clearAdminKey();
+      }
+      if (!res.ok || !data.success || !data.store || !data.pinCode) {
+        return { success: false, error: data.error ?? 'Erreur de réinitialisation du PIN' };
+      }
+      return { success: true, store: data.store, pinCode: data.pinCode };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
 
-    store.expires_at = baseDate.toISOString();
-    store.is_active = 1;
+  async renewStoreLicense(storeId: string, additionalMonths = 12): Promise<{ success: boolean; store?: Store; error?: string }> {
+    const key = this.getAdminKey();
+    if (!key) return { success: false, error: 'Clé administrateur absente' };
 
-    this.saveToStorage('ve_stores', this.stores);
-    return store;
+    try {
+      const res = await fetch(`${API_BASE}/admin/licenses`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Key': key,
+        },
+        body: JSON.stringify({ storeId, action: 'renew', additionalMonths }),
+      });
+      const data = await parseJson(res);
+      return res.ok
+        ? { success: true, store: data.store }
+        : { success: false, error: data.error ?? 'Erreur de renouvellement' };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
   }
 }
 

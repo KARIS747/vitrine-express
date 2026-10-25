@@ -1,95 +1,134 @@
-# 🛍️ VitrineExpress — Vitrines PWA & WhatsApp pour Boutiques
+# VitrineExpress
 
-Conçu et développé sur-mesure pour **Karis** (L3 Informatique, Cameroun) pour lancer un business rentable de création de vitrines de boutiques à **5 000 FCFA / an**.
+PWA de vitrines WhatsApp pour boutiques, pensée pour Karis (L3 Informatique, Cameroun) et conçue pour tourner à 100 % sur l'offre gratuite de Cloudflare Pages + D1.
 
----
+## Modèle économique
 
-## 🎯 Le Concept & Modèle Économique (Business Model)
+1. Karis crée chaque boutique depuis le License Manager (`/admin`) et remet au commerçant son lien public, sa clé de licence et son PIN.
+2. La formule de base coûte 5 000 FCFA/an et donne droit à 20 produits.
+3. Les commandes se font directement sur WhatsApp, sans passerelle de paiement.
+4. Les produits peuvent être marqués « en stock » ou « bientôt disponible » avec une date de réapprovisionnement.
+5. Les photos sont compressées côté navigateur avant l'envoi.
 
-1. **Aucun compte complexe à créer par les commerçants :**
-   * Tu gères tout depuis ton **License Manager Admin**.
-   * Tu vends la création de la boutique à **5 000 FCFA pour 1 an** (environ 415 FCFA / mois).
-   * Tu fournis au commerçant : son lien public, son code PIN et son **affiche QR Code comptoir** prête à imprimer.
+## Stack
 
-2. **La règle stricte des 20 produits :**
-   * Chaque boutique est limitée à **20 articles max**.
-   * Cette limite force le commerçant à exposer ses best-sellers et te garantit de **rester 100% dans les quotas gratuits de Cloudflare D1 et Pages** (0 FCFA de frais de serveur pour toi).
-   * Si un commerçant veut plus de 20 articles, tu lui proposes la formule Pro à 10 000 FCFA/an !
+- React 18 + TypeScript + Vite
+- Tailwind CSS
+- Cloudflare Pages Functions
+- Cloudflare D1
+- `qrcode` pour la génération locale des affiches, `jsqr` pour scanner les QR codes côté client
 
-3. **100% WhatsApp-First :**
-   * Zéro passerelle de paiement compliquée.
-   * Chaque produit dispose du bouton **"Discuter sur WhatsApp"** avec un message pré-rempli sur-mesure contenant le nom du produit, le prix en FCFA, le lien et la demande de disponibilité.
+## Espaces et routes
 
-4. **Gestion des disponibilités & "Bientôt disponible" :**
-   * Badge vert **"En stock"** pour les articles en rayon.
-   * Badge ambre **"Arrive le JJ/MM/AAAA"** pour les réapprovisionnements en cours, incitant les clients à réserver à l'avance sur WhatsApp.
+| Route | Accès | Description |
+| --- | --- | --- |
+| `/` | Public | Accueil : présentation, scan QR, collage de lien, boutiques en ligne, accès gérant |
+| `/boutique/:slug` | Public | Vitrine client : catalogue, recherche, filtres, WhatsApp |
+| `/merchant` | Clé de licence + PIN | Espace boutiquier : produits, catégories, QR code |
+| `/admin` | Clé `ADMIN_KEY` | License Manager : boutiques, licences, suspension, renouvellement |
 
-5. **Compression intelligente des photos intégrée (0 Ko de data gaspillée) :**
-   * Le commerçant prend une photo de 8 Mo avec son téléphone.
-   * Le navigateur la compresse automatiquement à **~90 Ko** avant l'envoi.
-   * Chargement instantané même sur le réseau 3G/4G camerounais (Orange / MTN).
+La page d'accueil scanne les QR codes directement dans le navigateur (caméra ou photo importée) et accepte aussi un lien complet, un slug ou l'ancien format `/?store=slug`.
 
----
+## Développement local
 
-## 🚀 Démarrage Local
+### Frontend seul
 
 ```bash
-cd /home/karis/PROJECT/vitrine-express
+npm install
 npm run dev
 ```
 
-L'application s'ouvre sur `http://localhost:5173`.
+Le frontend est disponible sur `http://localhost:5173`, mais les routes `/api/*` ne fonctionnent pas sans le runtime Cloudflare.
 
----
+### Application complète (Pages Functions + D1 locale)
 
-## ☁️ Déploiement 100% Gratuit sur Cloudflare (Pages + D1)
-
-### Étape 1 : Créer la Base de Données Cloudflare D1
-Dans ton terminal ou sur le dashboard Cloudflare :
 ```bash
-# 1. Créer la base D1
-npx wrangler d1 create vitrine_express_db
-
-# 2. Exécuter le schéma SQL (tables & données de démo)
-npx wrangler d1 execute vitrine_express_db --file=./schema.sql
+npm install
+npm run db:local
+printf 'ADMIN_KEY=une-cle-locale-longue-et-aleatoire\nPIN_PEPPER=un-secret-local-different\n' > .dev.vars
+npm run dev:full
 ```
 
-### Étape 2 : Déployer sur Cloudflare Pages
-1. Pousse ton code sur ton compte GitHub :
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit VitrineExpress"
-   git remote add origin https://github.com/ton-profil/vitrine-express.git
-   git push -u origin main
-   ```
-2. Rends-toi sur [dash.cloudflare.com](https://dash.cloudflare.com/) ➔ **Workers & Pages** ➔ **Create application** ➔ **Pages** ➔ **Connect to Git**.
-3. Sélectionne ton dépôt :
-   * **Framework preset :** `Vite`
-   * **Build command :** `npm run build`
-   * **Build output directory :** `dist`
-4. Dans **Settings** ➔ **Functions** ➔ **D1 database bindings** :
-   * Nom de la variable : `DB`
-   * Sélectionne ta base : `vitrine_express_db`
-5. Clique sur **Deploy** ! Ton site est en ligne en HTTPS gratuit avec bande passante illimitée !
+L'application complète est disponible sur `http://localhost:8788`.
 
----
+- `.dev.vars` est ignoré par Git.
+- `npm run db:local` applique `schema.sql` sur la base D1 locale.
+- `ADMIN_KEY` et `PIN_PEPPER` doivent rester des valeurs longues et aléatoires, jamais des valeurs de production dans un fichier suivi par Git.
 
-## 📱 Les 3 Espaces de l'Application
+### Vérifications
 
-1. **Vitrine Client (`/?store=kamer-kicks`) :**
-   * Header avec couverture, logo officiel, ville, quartier, bouton d'appel direct.
-   * Barre de recherche instantanée et filtres par catégories fluides.
-   * Grille produit avec badges de stock, prix FCFA et bouton de commande WhatsApp.
-   * Fiche détaillée en pop-up moderne.
-2. **Espace Gérant :**
-   * Jauge en temps réel du quota : `14 / 20 produits utilisés`.
-   * Bouton d'ajout avec compression d'image en direct.
-   * Bouton pour basculer un article en "En stock" ou "Bientôt disponible" avec date.
-   * Générateur d'affiche QR Code pour le comptoir ou la porte du magasin.
-3. **Licence Manager Karis (`/admin`) :**
-   * Tableau de bord réservé à Karis.
-   * Création instantanée d'une nouvelle boutique (attribution de la clé licence et du PIN).
-   * Calcul en temps réel du Chiffre d'Affaires encaissé (X boutiques × 5 000 FCFA).
-   * Suivi des dates d'échéances pour relancer les paiements annuels.
-   * Suspension ou réactivation en 1 clic.
+```bash
+npm run typecheck
+npm run build
+```
+
+## Déploiement sur Cloudflare
+
+### 1. Base D1
+
+La base existe déjà en production. Pour appliquer ou remettre à jour le schéma :
+
+```bash
+npm run db:remote
+```
+
+Le schéma est idempotent (`CREATE TABLE IF NOT EXISTS`, `INSERT OR IGNORE`).
+
+### 2. Secrets
+
+La clé admin et le secret de hachage des PIN ne doivent jamais être stockés dans `wrangler.toml`. Configure-les comme secrets Pages :
+
+```bash
+npx wrangler pages secret put ADMIN_KEY --project-name=vitrine-express
+npx wrangler pages secret put PIN_PEPPER --project-name=vitrine-express
+```
+
+`PIN_PEPPER` sert à signer les PIN hachés. S'il est perdu ou remplacé, les PIN existants ne sont plus vérifiables : utilise alors le bouton `PIN` du License Manager pour en générer de nouveaux.
+
+### 3. Déploiement
+
+```bash
+npm run deploy
+```
+
+Ou via l'intégration Git de Cloudflare Pages :
+
+- Framework preset : `Vite`
+- Build command : `npm run build`
+- Build output directory : `dist`
+- D1 binding : variable `DB`, base `vitrine_express_db`
+
+## Données de démonstration
+
+`schema.sql` crée la boutique `kamer-kicks` avec 4 produits et 4 catégories. Pour le développement local, la licence est `LIC-KK2026-99` et le PIN est `1234`.
+
+Ces identifiants sont publics dans le dépôt et ne doivent pas être utilisés tels quels en production. Le PIN de la boutique de démonstration en production a été remplacé par une valeur aléatoire.
+
+## Sécurité
+
+- PIN hachés avec HMAC-SHA256, un sel aléatoire par boutique et le secret serveur `PIN_PEPPER`.
+- Les anciens PIN en clair sont acceptés une dernière fois puis migrés automatiquement après une connexion réussie.
+- Le PIN n'est plus jamais réaffiché dans le License Manager : le bouton `PIN` génère un nouveau code et l'affiche une seule fois.
+- Limitation des tentatives : 5 échecs par IP et par identifiant pour le login (blocage 15 min), 12 échecs pour les actions marchand, 5 échecs pour l'admin (blocage 30 min).
+- Un PIN correct reste accepté même si l'IP a été temporairement bloquée, puis les compteurs sont remis à zéro.
+
+## Checklist de mise en production
+
+- [ ] Révoquer l'ancien token GitHub exposé.
+- [x] Remplacer l'ancienne clé admin exposée par un secret aléatoire.
+- [x] Changer le PIN de la boutique de démonstration en production.
+- [x] Supprimer l'ancien mot de passe admin du bundle et de la configuration.
+- [x] Hacher les PIN et limiter les tentatives de connexion.
+- [ ] Vérifier que `ADMIN_KEY` et `PIN_PEPPER` n'apparaissent ni dans `wrangler.toml`, ni dans le bundle, ni dans Git.
+
+## Commandes utiles
+
+```bash
+npm run dev        # frontend Vite seul
+npm run dev:full   # build + Cloudflare Pages local
+npm run typecheck  # vérification TypeScript
+npm run build      # build de production
+npm run deploy     # build + déploiement Cloudflare Pages
+npm run db:local   # schéma + démo sur D1 locale
+npm run db:remote  # schéma sur D1 distante
+```

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Smartphone, Download, X } from 'lucide-react';
+import { Smartphone, Download, X, Share2 } from 'lucide-react';
 
 export const PWAInstallButton: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -112,8 +112,9 @@ export const PWAInstallButton: React.FC = () => {
                 Installation sur iPhone & iPad
               </h3>
               <p className="text-xs text-ink-600 mt-2 leading-relaxed">
-                1. Appuyez sur le bouton <strong>Partager</strong> <span className="text-sm">⎋</span> en bas de Safari.<br />
-                2. Faites défiler et sélectionnez <strong>« Sur l'écran d'accueil »</strong> 📲.
+                1. Appuyez sur le bouton <strong>Partager</strong>{' '}
+                <Share2 className="w-3.5 h-3.5 inline text-ink-500 -mt-0.5" /> en bas de Safari.<br />
+                2. Faites défiler et sélectionnez <strong>« Sur l'écran d'accueil »</strong>.
               </p>
               <button
                 onClick={() => setShowIosGuide(false)}

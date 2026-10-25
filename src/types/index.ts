@@ -11,13 +11,16 @@ export interface Store {
   address_notes?: string;
   logo_url?: string;
   banner_url?: string;
-  license_key: string;
-  pin_code?: string;
+  theme_primary?: string;
+  theme_accent?: string;
+  license_key?: string;
   max_products: number; // Défaut: 20
   expires_at: string;
   is_active: number | boolean;
   created_at?: string;
   current_products_count?: number;
+  price_paid?: number;
+  license_status?: string;
 }
 
 export interface Category {
@@ -57,4 +60,4 @@ export interface License {
   created_at?: string;
 }
 
-export type ViewMode = 'storefront' | 'merchant' | 'admin' | 'print-poster';
+export type ViewMode = 'landing' | 'storefront' | 'merchant' | 'admin' | 'print-poster';

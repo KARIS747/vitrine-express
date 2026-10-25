@@ -184,8 +184,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                 <div>
-                  <span className="font-bold block">Limite des 20 produits atteinte</span>
-                  Votre forfait actuel (5 000 FCFA/an) autorise 20 articles actifs. Contactez Karis pour débloquer le forfait supérieur ou supprimez un ancien article.
+                  <span className="font-bold block">Limite de {maxProducts} produits atteinte</span>
+                  Votre forfait actuel autorise {maxProducts} articles actifs. Contactez Karis pour débloquer un forfait supérieur ou supprimez un ancien article.
                 </div>
               </div>
             )}

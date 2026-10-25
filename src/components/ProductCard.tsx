@@ -77,7 +77,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div>
           <h3 
             onClick={() => onOpenModal(product)}
-            className="font-display font-semibold text-ink-900 text-sm sm:text-base leading-snug line-clamp-1 group-hover:text-brand-700 transition-colors cursor-pointer"
+            className="font-display font-semibold text-ink-900 text-sm sm:text-base leading-snug line-clamp-1 store-title-hover cursor-pointer"
           >
             {product.name}
           </h3>
