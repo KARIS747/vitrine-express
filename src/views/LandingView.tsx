@@ -10,8 +10,10 @@ import {
   Link2,
   Loader2,
   LockKeyhole,
+  Mail,
   MapPin,
   MessageCircle,
+  Phone,
   QrCode,
   ScanLine,
   ShieldCheck,
@@ -241,6 +243,15 @@ export const LandingView: React.FC<LandingViewProps> = ({
             </div>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
+              <a
+                href="https://wa.me/237681610040?text=Bonjour%20Karis%2C%20je%20souhaite%20cr%C3%A9er%20ma%20vitrine%20en%20ligne%20sur%20VitrineExpress."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Créer ma boutique sur WhatsApp
+              </a>
               <a
                 href="#boutiques"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-semibold text-ink-800 shadow-xs transition-colors hover:bg-warm-100"
@@ -473,26 +484,51 @@ export const LandingView: React.FC<LandingViewProps> = ({
           <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-brand-500/15 blur-3xl" />
           <div className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-amber-400/10 blur-3xl" />
 
-          <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300">
-                Espace professionnel
+                Vous voulez votre propre vitrine ?
               </p>
               <h2 className="mt-2 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-                Votre vitrine est déjà en ligne ?
+                Lancez votre boutique en ligne à 5 000 FCFA / an
               </h2>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/55">
-                Connectez-vous pour ajouter un article, changer un prix ou annoncer un arrivage.
-                Vos clients voient les changements immédiatement.
+              <p className="mt-2.5 text-sm leading-relaxed text-white/70">
+                Idéal pour exposer vos articles, partager votre catalogue sur WhatsApp et poser votre affiche QR code en boutique. Je configure votre espace personnel en quelques minutes.
               </p>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <a
+                  href="https://wa.me/237681610040?text=Bonjour%20Karis%2C%20je%20veux%20cr%C3%A9er%20ma%20vitrine%20en%20ligne%20sur%20VitrineExpress."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-xs font-bold text-ink-950 transition-colors hover:bg-emerald-400"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Créer ma boutique sur WhatsApp
+                </a>
+                <a
+                  href="tel:+237681610040"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white transition-colors hover:bg-white/20"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  +237 681 610 040
+                </a>
+              </div>
             </div>
-            <button
-              onClick={onMerchantLogin}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-bold text-ink-950 transition-colors hover:bg-brand-50 cursor-pointer"
-            >
-              Ouvrir mon espace
-              <ArrowUpRight className="h-4 w-4" />
-            </button>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xs">
+              <p className="text-xs font-semibold text-white">Commerçant déjà inscrit ?</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-white/60">
+                Connectez-vous pour ajouter un article, changer un prix ou annoncer un nouvel arrivage.
+              </p>
+              <button
+                onClick={onMerchantLogin}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-ink-950 transition-colors hover:bg-brand-50 cursor-pointer"
+              >
+                Ouvrir mon espace gérant
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -511,6 +547,25 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 Vitrines WhatsApp pour les commerçants du Cameroun.
               </p>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-ink-600">
+            <a
+              href="https://wa.me/237681610040"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-emerald-700 transition-colors"
+            >
+              <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+              <span>WhatsApp : +237 681 610 040</span>
+            </a>
+            <a
+              href="mailto:karisdev369@gmail.com"
+              className="inline-flex items-center gap-1.5 hover:text-ink-950 transition-colors"
+            >
+              <Mail className="h-3.5 w-3.5 text-ink-400" />
+              <span>karisdev369@gmail.com</span>
+            </a>
           </div>
 
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-ink-500">
@@ -534,7 +589,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </nav>
         </div>
         <div className="border-t border-ink-100 px-4 py-4 text-center text-[10px] text-ink-400">
-          © {new Date().getFullYear()} VitrineExpress. Conçu pour le commerce de proximité.
+          © {new Date().getFullYear()} VitrineExpress • Développé par Karis (+237 681 610 040 • karisdev369@gmail.com)
         </div>
       </footer>
 
