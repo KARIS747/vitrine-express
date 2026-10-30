@@ -2,6 +2,8 @@ import React, { Suspense, lazy, useState } from 'react';
 import { Store } from '../types';
 import { extractStoreSlug } from '../utils/storeLink';
 import { toast } from 'sonner';
+import { useLanguage } from '../utils/i18n';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import {
   AlertCircle,
   ArrowRight,
@@ -44,33 +46,14 @@ interface LandingViewProps {
   onAdmin: () => void;
 }
 
-const steps = [
-  {
-    number: '01',
-    title: 'Scannez ou ouvrez le lien',
-    description: 'Le QR code de la boutique vous emmène directement sur son catalogue.',
-    icon: ScanLine,
-  },
-  {
-    number: '02',
-    title: 'Parcourez les articles',
-    description: 'Photos, prix, disponibilité et arrivages : tout est clair en un coup d’œil.',
-    icon: ShoppingBag,
-  },
-  {
-    number: '03',
-    title: 'Commandez sur WhatsApp',
-    description: 'Un article vous plaît ? La conversation s’ouvre avec le message déjà prêt.',
-    icon: MessageCircle,
-  },
-];
-
 const StoreCard: React.FC<{
   store: Store;
   isOpening: boolean;
   isDisabled: boolean;
   onOpen: () => void;
-}> = ({ store, isOpening, isDisabled, onOpen }) => {
+  viewLabel: string;
+  onlineLabel: string;
+}> = ({ store, isOpening, isDisabled, onOpen, viewLabel, onlineLabel }) => {
   const productCount = Number(store.current_products_count) || 0;
   const location = [store.city, store.quarter].filter(Boolean).join(' • ');
 
@@ -97,7 +80,7 @@ const StoreCard: React.FC<{
 
         <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/25 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          En ligne
+          {onlineLabel}
         </span>
 
         {productCount > 0 && (
@@ -139,7 +122,7 @@ const StoreCard: React.FC<{
         </p>
 
         <div className="mt-auto flex items-center justify-between border-t border-ink-100 pt-3">
-          <span className="text-[11px] font-semibold text-brand-700">Voir la boutique</span>
+          <span className="text-[11px] font-semibold text-brand-700">{viewLabel}</span>
           {isOpening ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-600" />
           ) : (
@@ -158,10 +141,17 @@ export const LandingView: React.FC<LandingViewProps> = ({
   onMerchantLogin,
   onAdmin,
 }) => {
+  const { t, language } = useLanguage();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [linkInput, setLinkInput] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+
+  const steps = [
+    { number: '01', title: t.landing.step1Title, description: t.landing.step1Desc, icon: ScanLine },
+    { number: '02', title: t.landing.step2Title, description: t.landing.step2Desc, icon: ShoppingBag },
+    { number: '03', title: t.landing.step3Title, description: t.landing.step3Desc, icon: MessageCircle },
+  ];
 
   const openStore = async (slug: string) => {
     setPendingSlug(slug);
@@ -170,7 +160,9 @@ export const LandingView: React.FC<LandingViewProps> = ({
     try {
       const opened = await onOpenStoreBySlug(slug);
       if (!opened) {
-        const message = 'Boutique introuvable ou indisponible pour le moment.';
+        const message = language === 'fr'
+          ? 'Boutique introuvable ou indisponible pour le moment.'
+          : 'Store not found or currently unavailable.';
         setLinkError(message);
         toast.error(message);
       }
@@ -184,7 +176,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
     const slug = extractStoreSlug(linkInput);
 
     if (!slug) {
-      setLinkError("Ce lien ne correspond pas à une boutique VitrineExpress. Vérifiez le lien ou son QR code.");
+      setLinkError(t.landing.invalidLinkError);
       return;
     }
 
@@ -194,13 +186,26 @@ export const LandingView: React.FC<LandingViewProps> = ({
   const handleDetected = (value: string) => {
     const slug = extractStoreSlug(value);
     if (!slug) {
-      toast.error("Ce QR code ne contient pas de lien vers une boutique VitrineExpress.");
+      toast.error(
+        language === 'fr'
+          ? 'Ce QR code ne contient pas de lien vers une boutique VitrineExpress.'
+          : 'This QR code does not link to a VitrineExpress store.',
+      );
       return;
     }
     void openStore(slug);
   };
 
-  const storeCountLabel = `${stores.length} boutique${stores.length > 1 ? 's' : ''} en ligne`;
+  const storeCountLabel =
+    language === 'fr'
+      ? `${stores.length} boutique${stores.length > 1 ? 's' : ''} en ligne`
+      : `${stores.length} store${stores.length > 1 ? 's' : ''} online`;
+
+  const waCreateMsg =
+    language === 'fr'
+      ? 'Bonjour%20Karis%2C%20je%20souhaite%20cr%C3%A9er%20ma%20vitrine%20en%20ligne%20sur%20VitrineExpress.'
+      : 'Hello%20Karis%2C%20I%20would%20like%20to%20create%20my%20online%20store%20on%20VitrineExpress.';
+
   const isPending = pendingSlug !== null;
 
   return (
@@ -213,58 +218,57 @@ export const LandingView: React.FC<LandingViewProps> = ({
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/70 px-3 py-1.5 text-[11px] font-semibold text-brand-800 shadow-xs backdrop-blur-sm">
               <Sparkles className="h-3.5 w-3.5 text-brand-600" />
-              Le commerce de proximité, en ligne
+              {t.landing.tagline}
             </div>
 
             <h1 className="mt-5 max-w-2xl font-display text-4xl font-bold leading-[1.04] tracking-tight text-ink-950 sm:text-5xl lg:text-6xl">
-              Votre boutique,
+              {t.landing.heroTitle}
               <br />
-              <span className="text-brand-700">prête à être partagée.</span>
+              <span className="text-brand-700">{t.landing.heroHighlight}</span>
             </h1>
 
             <p className="mt-5 max-w-xl text-sm leading-relaxed text-ink-600 sm:text-base">
-              Un catalogue élégant, un lien simple et un QR code à scanner. Vos clients découvrent
-              vos produits et vous écrivent directement sur WhatsApp, sans installer d’application.
+              {t.landing.heroDescription}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium text-ink-500">
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-brand-600" />
-                Sans application
+                {t.landing.featureNoApp}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-brand-600" />
-                Commande WhatsApp
+                {t.landing.featureWhatsApp}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-brand-600" />
-                Mise à jour instantanée
+                {t.landing.featureInstant}
               </span>
             </div>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <a
-                href="https://wa.me/237681610040?text=Bonjour%20Karis%2C%20je%20souhaite%20cr%C3%A9er%20ma%20vitrine%20en%20ligne%20sur%20VitrineExpress."
+                href={`https://wa.me/237681610040?text=${waCreateMsg}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
               >
                 <MessageCircle className="h-4 w-4" />
-                Créer ma boutique sur WhatsApp
+                {t.landing.ctaCreateStore}
               </a>
               <a
                 href="#boutiques"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-semibold text-ink-800 shadow-xs transition-colors hover:bg-warm-100"
               >
                 <StoreIcon className="h-3.5 w-3.5" />
-                Découvrir les boutiques
+                {t.landing.ctaDiscover}
               </a>
               <button
                 onClick={() => setIsScannerOpen(true)}
                 className="inline-flex items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-xs font-semibold text-ink-500 transition-colors hover:text-ink-950 cursor-pointer"
               >
                 <QrCode className="h-3.5 w-3.5" />
-                J’ai un QR code
+                {t.landing.ctaHasQr}
               </button>
             </div>
           </div>
@@ -275,10 +279,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">
-                    Accès client
+                    {t.landing.clientAccessTitle}
                   </p>
                   <h2 className="mt-1 font-display text-lg font-bold tracking-tight text-ink-950">
-                    Entrer dans une boutique
+                    {t.landing.clientAccessHeading}
                   </h2>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-100 bg-brand-50 text-brand-700">
@@ -295,9 +299,9 @@ export const LandingView: React.FC<LandingViewProps> = ({
                     <ScanLine className="h-5 w-5" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold">Scanner un QR code</span>
+                    <span className="block text-sm font-semibold">{t.landing.scanQrBtn}</span>
                     <span className="mt-0.5 block text-[11px] text-white/50">
-                      Avec la caméra ou une photo
+                      {t.landing.scanQrSub}
                     </span>
                   </span>
                 </span>
@@ -307,7 +311,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               <div className="my-4 flex items-center gap-3">
                 <span className="h-px flex-1 bg-ink-100" />
                 <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-                  ou
+                  {t.landing.or}
                 </span>
                 <span className="h-px flex-1 bg-ink-100" />
               </div>
@@ -317,7 +321,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   htmlFor="store-link"
                   className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500"
                 >
-                  Coller le lien de la boutique
+                  {t.landing.pasteLinkPlaceholder}
                 </label>
                 <div className="mt-2 flex gap-2">
                   <div className="relative min-w-0 flex-1">
@@ -342,7 +346,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                     className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand-700 px-3.5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-55 cursor-pointer"
                   >
                     {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                    <span className="hidden sm:inline">Ouvrir</span>
+                    <span className="hidden sm:inline">{t.landing.openStoreBtn}</span>
                   </button>
                 </div>
                 {linkError && (
@@ -359,9 +363,9 @@ export const LandingView: React.FC<LandingViewProps> = ({
                     <UserRound className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-ink-900">Vous êtes boutiquier ?</p>
+                    <p className="text-xs font-semibold text-ink-900">{t.landing.merchantCardTitle}</p>
                     <p className="mt-0.5 text-[11px] leading-relaxed text-ink-500">
-                      Gérez votre catalogue, vos prix et vos arrivages.
+                      {t.landing.merchantCardText}
                     </p>
                   </div>
                 </div>
@@ -371,7 +375,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <LockKeyhole className="h-3.5 w-3.5 text-brand-700" />
-                    Se connecter à mon espace
+                    {t.landing.merchantLoginBtn}
                   </span>
                   <ArrowUpRight className="h-3.5 w-3.5 text-ink-400" />
                 </button>
@@ -384,14 +388,13 @@ export const LandingView: React.FC<LandingViewProps> = ({
       <section className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="max-w-2xl">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-700">
-            Simple pour vos clients
+            {t.landing.stepsSubtitle}
           </p>
           <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-ink-950 sm:text-3xl">
-            Un lien, un catalogue, une conversation WhatsApp.
+            {t.landing.stepsTitle}
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-ink-500">
-            Pas de compte à créer, pas d’application à installer. Vos clients arrivent directement
-            sur votre vitrine et commandent là où ils sont déjà.
+            {t.landing.stepsDescription}
           </p>
         </div>
 
@@ -418,10 +421,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-700">
-                À découvrir
+                {t.landing.discoverTitle}
               </p>
               <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-ink-950 sm:text-3xl">
-                Boutiques en ligne
+                {t.landing.onlineStoresHeading}
               </h2>
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-ink-600">
@@ -452,6 +455,8 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   isOpening={pendingSlug === store.slug}
                   isDisabled={isPending}
                   onOpen={() => void openStore(store.slug)}
+                  viewLabel={language === 'fr' ? 'Voir la boutique' : 'View store'}
+                  onlineLabel={language === 'fr' ? 'En ligne' : 'Online'}
                 />
               ))}
             </div>
@@ -461,18 +466,17 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 <StoreIcon className="h-6 w-6" />
               </div>
               <h3 className="mt-3 font-display text-base font-semibold text-ink-900">
-                Les premières vitrines arrivent bientôt
+                {t.landing.emptyStoresTitle}
               </h3>
               <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-500">
-                Vous êtes commerçant ? Connectez-vous à votre espace pour mettre votre catalogue
-                en ligne.
+                {t.landing.emptyStoresText}
               </p>
               <button
                 onClick={onMerchantLogin}
                 className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-ink-950 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-black cursor-pointer"
               >
                 <UserRound className="h-3.5 w-3.5" />
-                Espace gérant
+                {language === 'fr' ? 'Espace gérant' : 'Merchant space'}
               </button>
             </div>
           )}
@@ -487,24 +491,24 @@ export const LandingView: React.FC<LandingViewProps> = ({
           <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300">
-                Vous voulez votre propre vitrine ?
+                {t.landing.proBannerTag}
               </p>
               <h2 className="mt-2 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-                Lancez votre boutique en ligne à 5 000 FCFA / an
+                {t.landing.proBannerTitle}
               </h2>
               <p className="mt-2.5 text-sm leading-relaxed text-white/70">
-                Idéal pour exposer vos articles, partager votre catalogue sur WhatsApp et poser votre affiche QR code en boutique. Je configure votre espace personnel en quelques minutes.
+                {t.landing.proBannerDesc}
               </p>
 
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <a
-                  href="https://wa.me/237681610040?text=Bonjour%20Karis%2C%20je%20veux%20cr%C3%A9er%20ma%20vitrine%20en%20ligne%20sur%20VitrineExpress."
+                  href={`https://wa.me/237681610040?text=${waCreateMsg}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-xs font-bold text-ink-950 transition-colors hover:bg-emerald-400"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  Créer ma boutique sur WhatsApp
+                  {t.landing.proBannerCta}
                 </a>
                 <a
                   href="tel:+237681610040"
@@ -517,15 +521,15 @@ export const LandingView: React.FC<LandingViewProps> = ({
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xs">
-              <p className="text-xs font-semibold text-white">Commerçant déjà inscrit ?</p>
+              <p className="text-xs font-semibold text-white">{t.landing.proMerchantBoxTitle}</p>
               <p className="mt-1 text-[11px] leading-relaxed text-white/60">
-                Connectez-vous pour ajouter un article, changer un prix ou annoncer un nouvel arrivage.
+                {t.landing.proMerchantBoxText}
               </p>
               <button
                 onClick={onMerchantLogin}
                 className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-ink-950 transition-colors hover:bg-brand-50 cursor-pointer"
               >
-                Ouvrir mon espace gérant
+                {t.landing.proMerchantBoxBtn}
                 <ArrowUpRight className="h-4 w-4" />
               </button>
             </div>
@@ -544,7 +548,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 VitrineExpress
               </p>
               <p className="text-[11px] text-ink-500">
-                Vitrines WhatsApp pour les commerçants du Cameroun.
+                {t.landing.footerSubtitle}
               </p>
             </div>
           </div>
@@ -570,26 +574,27 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-ink-500">
             <a href="#boutiques" className="transition-colors hover:text-ink-950">
-              Boutiques
+              {language === 'fr' ? 'Boutiques' : 'Stores'}
             </a>
             <button
               onClick={onMerchantLogin}
               className="inline-flex items-center gap-1.5 transition-colors hover:text-ink-950 cursor-pointer"
             >
               <LockKeyhole className="h-3.5 w-3.5" />
-              Espace gérant
+              {language === 'fr' ? 'Espace gérant' : 'Merchant space'}
             </button>
             <button
               onClick={onAdmin}
               className="inline-flex items-center gap-1.5 transition-colors hover:text-ink-950 cursor-pointer"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              Administration
+              {language === 'fr' ? 'Administration' : 'Admin'}
             </button>
+            <LanguageSwitcher variant="footer" />
           </nav>
         </div>
         <div className="border-t border-ink-100 px-4 py-4 text-center text-[10px] text-ink-400">
-          © {new Date().getFullYear()} VitrineExpress • Développé par Karis (+237 681 610 040 • karisdev369@gmail.com)
+          © {new Date().getFullYear()} {t.landing.footerDesignedBy}
         </div>
       </footer>
 

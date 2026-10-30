@@ -5,6 +5,7 @@ import { CategoryTabs } from '../components/CategoryTabs';
 import { ProductCard } from '../components/ProductCard';
 import { ProductModal } from '../components/ProductModal';
 import { QRPosterModal } from '../components/QRPosterModal';
+import { useLanguage } from '../utils/i18n';
 import { Search, ShoppingBag, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,6 +24,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
   searchQuery,
   onSearchChange,
 }) => {
+  const { t, language } = useLanguage();
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -63,14 +65,26 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
     if (navigator.share) {
       navigator.share({
         title: store.name,
-        text: `Découvrez la vitrine officielle de ${store.name} sur VitrineExpress :`,
+        text: language === 'fr'
+          ? `Découvrez la vitrine officielle de ${store.name} sur VitrineExpress :`
+          : `Check out the official storefront of ${store.name} on VitrineExpress:`,
         url: url
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(url);
-      toast.success("Lien de la vitrine copié ! Vous pouvez le coller sur votre statut WhatsApp.");
+      toast.success(t.storefront.linkCopied);
     }
   };
+
+  const foundLabel =
+    language === 'fr'
+      ? `${filteredProducts.length} ${filteredProducts.length > 1 ? 'articles trouvés' : 'article trouvé'}`
+      : `${filteredProducts.length} item${filteredProducts.length > 1 ? 's' : ''} found`;
+
+  const inStockLabel = language === 'fr' ? `${inStockCount} en stock` : `${inStockCount} in stock`;
+  const arrivingLabel = language === 'fr' ? `${arrivingCount} en arrivage` : `${arrivingCount} restocking`;
+  const stockFilterLabel = language === 'fr' ? 'En stock uniquement' : 'In stock only';
+  const stockFilterPrefixLabel = language === 'fr' ? 'Filtrer : En stock uniquement' : 'Filter: In stock only';
 
   return (
     <div
@@ -101,7 +115,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
           <Search className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="search"
-            placeholder="Rechercher un article..."
+            placeholder={t.storefront.searchPlaceholder}
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
             className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-ink-200 text-sm outline-none bg-white focus:border-ink-400"
@@ -110,7 +124,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
             <button
               onClick={() => onSearchChange('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-400 hover:text-ink-700 cursor-pointer"
-              aria-label="Effacer la recherche"
+              aria-label={language === 'fr' ? 'Effacer la recherche' : 'Clear search'}
             >
               <X className="w-4 h-4" />
             </button>
@@ -121,17 +135,17 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
           <div className="flex items-center gap-2 text-xs text-ink-600">
             <span className="font-semibold text-ink-950">
-              {filteredProducts.length} {filteredProducts.length > 1 ? 'articles trouvés' : 'article trouvé'}
+              {foundLabel}
             </span>
             <span>•</span>
             <span className="text-emerald-700 font-medium">
-              {inStockCount} en stock
+              {inStockLabel}
             </span>
             {arrivingCount > 0 && (
               <>
                 <span>•</span>
                 <span className="text-amber-700 font-medium">
-                  {arrivingCount} en arrivage
+                  {arrivingLabel}
                 </span>
               </>
             )}
@@ -147,7 +161,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
             }`}
           >
             {filterStockOnly && <Check className="w-3.5 h-3.5" />}
-            {filterStockOnly ? 'En stock uniquement' : 'Filtrer : En stock uniquement'}
+            {filterStockOnly ? stockFilterLabel : stockFilterPrefixLabel}
           </button>
         </div>
 
@@ -171,10 +185,10 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
               <ShoppingBag className="w-6 h-6" />
             </div>
             <h3 className="font-display font-semibold text-base text-ink-900">
-              Aucun article correspondant
+              {t.storefront.noProductsFound}
             </h3>
             <p className="text-xs text-ink-500 mt-1">
-              Essayez de modifier votre recherche ou sélectionnez une autre catégorie.
+              {t.storefront.noProductsCategory}
             </p>
             {(searchQuery || filterStockOnly || selectedCategoryId !== 'all') && (
               <button
@@ -185,7 +199,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
                 }}
                 className="mt-4 px-4 py-2 rounded-xl bg-ink-900 text-white text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
               >
-                Réinitialiser les filtres
+                {t.storefront.clearFilter}
               </button>
             )}
           </div>

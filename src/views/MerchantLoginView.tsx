@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Store } from '../types';
 import { dbService } from '../services/db';
 import { toast } from 'sonner';
+import { useLanguage } from '../utils/i18n';
 import {
   ArrowLeft,
   Eye,
@@ -22,6 +23,7 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
   onLoginSuccess,
   onBack,
 }) => {
+  const { t, language } = useLanguage();
   const [licenseKey, setLicenseKey] = useState('');
   const [pinCode, setPinCode] = useState('');
   const [showPin, setShowPin] = useState(false);
@@ -33,7 +35,11 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
     setError(null);
 
     if (!licenseKey.trim() || !pinCode.trim()) {
-      setError('Renseignez votre clé de licence et votre code PIN.');
+      setError(
+        language === 'fr'
+          ? 'Renseignez votre clé de licence et votre code PIN.'
+          : 'Please enter your license key and PIN code.',
+      );
       return;
     }
 
@@ -41,8 +47,8 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
     try {
       const result = await dbService.loginMerchant(licenseKey.trim(), pinCode.trim());
       if (!result.success || !result.store) {
-        setError(result.error ?? 'Identifiants invalides.');
-        toast.error(result.error ?? 'Identifiants invalides.');
+        setError(result.error ?? t.merchant.loginError);
+        toast.error(result.error ?? t.merchant.loginError);
         return;
       }
       onLoginSuccess(result.store);
@@ -50,6 +56,19 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  const featurePoints =
+    language === 'fr'
+      ? [
+          'Un catalogue clair, pensé pour WhatsApp',
+          'Les arrivages affichés avec leur date',
+          'Un lien et un QR code à partager',
+        ]
+      : [
+          'A clean catalog, built for WhatsApp',
+          'Restock dates displayed for your customers',
+          'A shareable link and QR code',
+        ];
 
   return (
     <div className="flex-1 min-h-[calc(100vh-3.5rem)] grid lg:grid-cols-[1.05fr_1fr]">
@@ -60,25 +79,30 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
         <div className="relative">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-medium text-white/70">
             <ShieldCheck className="w-3.5 h-3.5 text-brand-400" />
-            Espace professionnel sécurisé
+            {t.merchant.loginTitle}
           </div>
           <h1 className="font-display font-bold text-4xl xl:text-5xl leading-[1.1] tracking-tight mt-6 max-w-md">
-            Votre boutique,
-            <br />
-            <span className="text-brand-400">toujours à jour.</span>
+            {language === 'fr' ? (
+              <>
+                Votre boutique,
+                <br />
+                <span className="text-brand-400">toujours à jour.</span>
+              </>
+            ) : (
+              <>
+                Your store,
+                <br />
+                <span className="text-brand-400">always up to date.</span>
+              </>
+            )}
           </h1>
           <p className="text-sm text-white/55 leading-relaxed mt-5 max-w-sm">
-            Gérez votre catalogue, vos prix et vos arrivages en quelques secondes.
-            Vos clients voient immédiatement les changements sur votre vitrine.
+            {t.merchant.loginSubtitle}
           </p>
         </div>
 
         <div className="relative space-y-4 max-w-sm">
-          {[
-            "Un catalogue clair, pensé pour WhatsApp",
-            "Les arrivages affichés avec leur date",
-            "Un lien et un QR code à partager",
-          ].map((item) => (
+          {featurePoints.map((item) => (
             <div key={item} className="flex items-start gap-3 text-sm text-white/70">
               <span className="w-5 h-5 rounded-full bg-brand-500/20 text-brand-300 flex items-center justify-center shrink-0 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-400" />
@@ -96,7 +120,7 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
             className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-500 hover:text-ink-950 transition-colors mb-6 cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Retour à l'accueil
+            {language === 'fr' ? "Retour à l'accueil" : 'Back to home'}
           </button>
 
           <div className="bg-white rounded-3xl border border-ink-100 shadow-elevated p-6 sm:p-8">
@@ -105,17 +129,18 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
             </div>
 
             <h2 className="font-display font-bold text-2xl text-ink-950 tracking-tight">
-              Espace gérant
+              {language === 'fr' ? 'Espace gérant' : 'Merchant portal'}
             </h2>
             <p className="text-xs text-ink-500 mt-1.5 leading-relaxed">
-              Connectez-vous avec la clé de licence et le code PIN transmis lors de la
-              création de votre boutique.
+              {language === 'fr'
+                ? 'Connectez-vous avec la clé de licence et le code PIN transmis lors de la création de votre boutique.'
+                : 'Sign in with the license key and PIN code you received when your store was created.'}
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <div>
                 <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1.5">
-                  Clé de licence
+                  {t.merchant.licenseKeyLabel}
                 </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -123,7 +148,7 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
                     type="text"
                     value={licenseKey}
                     onChange={(event) => setLicenseKey(event.target.value)}
-                    placeholder="LIC-XXXX-XXXXXX"
+                    placeholder={t.merchant.licenseKeyPlaceholder}
                     autoCapitalize="characters"
                     autoComplete="username"
                     spellCheck={false}
@@ -134,7 +159,7 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
 
               <div>
                 <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1.5">
-                  Code PIN
+                  {t.merchant.pinLabel}
                 </label>
                 <div className="relative">
                   <LockKeyhole className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -142,7 +167,7 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
                     type={showPin ? 'text' : 'password'}
                     value={pinCode}
                     onChange={(event) => setPinCode(event.target.value)}
-                    placeholder="••••"
+                    placeholder={t.merchant.pinPlaceholder}
                     autoComplete="current-password"
                     inputMode="numeric"
                     className="w-full pl-10 pr-11 py-3 rounded-xl border border-ink-200 text-sm text-ink-950 font-mono tracking-[0.25em] outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/10 transition-all"
@@ -151,7 +176,9 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
                     type="button"
                     onClick={() => setShowPin((visible) => !visible)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-ink-400 hover:text-ink-700 cursor-pointer"
-                    aria-label={showPin ? 'Masquer le code PIN' : 'Afficher le code PIN'}
+                    aria-label={showPin
+                      ? (language === 'fr' ? 'Masquer le code PIN' : 'Hide PIN code')
+                      : (language === 'fr' ? 'Afficher le code PIN' : 'Show PIN code')}
                   >
                     {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -172,17 +199,18 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Connexion...
+                    {t.merchant.loginLoading}
                   </>
                 ) : (
-                  'Accéder à mon espace'
+                  t.merchant.loginBtn
                 )}
               </button>
             </form>
 
             <p className="text-[11px] text-ink-400 mt-5 leading-relaxed">
-              Vos accès sont confidentiels. Si vous les avez perdus, contactez Karis
-              pour les récupérer.
+              {language === 'fr'
+                ? 'Vos accès sont confidentiels. Si vous les avez perdus, contactez Karis pour les récupérer.'
+                : 'Your credentials are confidential. If you have lost them, contact Karis to recover them.'}
             </p>
           </div>
         </div>

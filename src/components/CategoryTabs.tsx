@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Category } from '../types';
 import { Layers } from 'lucide-react';
+import { useLanguage } from '../utils/i18n';
 
 interface CategoryTabsProps {
   categories: Category[];
@@ -16,6 +17,9 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   onSelectCategory,
   totalProductsCount
 }) => {
+  const { language } = useLanguage();
+  const allLabel = language === 'en' ? 'All' : 'Tout';
+
   return (
     <div className="w-full border-b border-ink-100/90 bg-white/70 backdrop-blur-md sticky top-14 z-20 py-2.5">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -38,7 +42,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
             )}
             <span className="relative z-10 flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5" />
-              <span>Tout ({totalProductsCount})</span>
+              <span>{allLabel} ({totalProductsCount})</span>
             </span>
           </button>
 

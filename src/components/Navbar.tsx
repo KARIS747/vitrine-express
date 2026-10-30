@@ -1,6 +1,8 @@
 import React from 'react';
 import { ViewMode } from '../types';
 import { Store as StoreIcon, Search, ShieldCheck, UserRound, Home } from 'lucide-react';
+import { useLanguage } from '../utils/i18n';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface NavbarProps {
   currentView: ViewMode;
@@ -15,6 +17,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   searchQuery,
   onSearchChange,
 }) => {
+  const { t } = useLanguage();
+
   return (
     <header className="sticky top-0 z-30 w-full bg-white/90 backdrop-blur-md border-b border-ink-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
@@ -30,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               VitrineExpress
             </span>
             <span className="text-[10px] text-ink-500 font-medium leading-none">
-              Boutiques Cameroun
+              {t.nav.subTitle}
             </span>
           </div>
         </button>
@@ -40,7 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Search className="w-3.5 h-3.5 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="search"
-              placeholder="Rechercher un article..."
+              placeholder={t.nav.searchPlaceholder}
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
               className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-ink-200 text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-ink-400 bg-warm-50/70"
@@ -48,11 +52,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         )}
 
-        <nav className="flex items-center gap-1.5">
+        <nav className="flex items-center gap-2">
+          {/* Language Switcher */}
+          <LanguageSwitcher variant="navbar" />
+
           {currentView === 'admin' && (
             <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Administration
+              {t.nav.admin}
             </span>
           )}
 
@@ -65,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Home className="w-3.5 h-3.5" />
-            <span>Accueil</span>
+            <span>{t.nav.home}</span>
           </button>
 
           <button
@@ -78,10 +85,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <UserRound className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">
-              {currentView === 'landing' ? 'Se connecter' : 'Espace gérant'}
+              {currentView === 'landing' ? t.nav.login : t.nav.merchantSpace}
             </span>
             <span className="sm:hidden">
-              {currentView === 'landing' ? 'Connexion' : 'Gérant'}
+              {currentView === 'landing' ? t.nav.login : t.nav.merchantSpace}
             </span>
           </button>
         </nav>

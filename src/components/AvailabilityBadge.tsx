@@ -1,6 +1,7 @@
 import React from 'react';
-import { Calendar, CheckCircle2, Clock } from 'lucide-react';
+import { CheckCircle2, Clock } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
+import { useLanguage } from '../utils/i18n';
 
 interface AvailabilityBadgeProps {
   isAvailable: boolean | number;
@@ -13,6 +14,7 @@ export const AvailabilityBadge: React.FC<AvailabilityBadgeProps> = ({
   restockDate,
   size = 'md'
 }) => {
+  const { language, t } = useLanguage();
   const available = Boolean(isAvailable);
 
   const sizeClasses = {
@@ -29,16 +31,20 @@ export const AvailabilityBadge: React.FC<AvailabilityBadgeProps> = ({
           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-600"></span>
         </span>
         <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-        <span>En stock</span>
+        <span>{t.storefront.inStock}</span>
       </span>
     );
   }
+
+  const dateFormatted = formatDate(restockDate, language);
 
   return (
     <span className={`inline-flex items-center font-medium rounded-full bg-amber-50 text-amber-900 border border-amber-200/90 shadow-xs ${sizeClasses}`}>
       <Clock className="w-3 h-3 text-amber-700 shrink-0" />
       <span>
-        {restockDate ? `Arrive le ${formatDate(restockDate)}` : 'Bientôt disponible'}
+        {restockDate
+          ? `${t.storefront.restockingOn} ${dateFormatted}`
+          : t.storefront.restockingSoon}
       </span>
     </span>
   );

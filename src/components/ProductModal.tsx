@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Store } from '../types';
-import { X, Calendar, MapPin, Tag } from 'lucide-react';
+import { X, Calendar } from 'lucide-react';
 import { formatFCFA, formatDate, buildWhatsAppOrderLink } from '../utils/formatters';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { WhatsAppButton } from './WhatsAppButton';
+import { useLanguage } from '../utils/i18n';
 
 interface ProductModalProps {
   product: Product | null;
@@ -17,10 +18,18 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   store,
   onClose
 }) => {
+  const { language, t } = useLanguage();
+
   if (!product) return null;
 
   const isAvailable = Boolean(product.is_available);
-  const whatsappUrl = buildWhatsAppOrderLink(store.whatsapp_number, store.name, product, store.slug);
+  const whatsappUrl = buildWhatsAppOrderLink(
+    store.whatsapp_number,
+    store.name,
+    product,
+    store.slug,
+    language
+  );
 
   return (
     <AnimatePresence>
@@ -46,6 +55,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           <button
             onClick={onClose}
             className="absolute top-3.5 right-3.5 z-20 p-2 rounded-full bg-white/80 backdrop-blur-md text-ink-700 hover:text-ink-950 hover:bg-white shadow-xs transition-colors cursor-pointer"
+            aria-label={t.storefront.close}
           >
             <X className="w-5 h-5" />
           </button>
@@ -82,9 +92,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
               {/* Price */}
               <div className="text-right shrink-0">
-                <span className="block text-xs text-ink-400 font-medium">Prix</span>
+                <span className="block text-xs text-ink-400 font-medium">
+                  {language === 'en' ? 'Price' : 'Prix'}
+                </span>
                 <span className="font-display font-bold text-xl sm:text-2xl text-ink-950">
-                  {formatFCFA(product.price)}
+                  {formatFCFA(product.price, language)}
                 </span>
               </div>
             </div>
@@ -94,8 +106,18 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               <div className="mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 flex items-start gap-2.5">
                 <Calendar className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
                 <div className="text-xs text-amber-900 leading-relaxed">
-                  <span className="font-semibold block">Article en cours d'approvisionnement</span>
-                  Arrivage prévu le <strong className="underline">{formatDate(product.restock_date)}</strong>. Vous pouvez réserver dès maintenant votre exemplaire sur WhatsApp avant la rupture.
+                  <span className="font-semibold block">
+                    {language === 'en' ? 'Item currently restocking' : "Article en cours d'approvisionnement"}
+                  </span>
+                  {language === 'en' ? (
+                    <>
+                      Estimated arrival on <strong className="underline">{formatDate(product.restock_date, 'en')}</strong>. You can reserve yours right now via WhatsApp before it sells out.
+                    </>
+                  ) : (
+                    <>
+                      Arrivage prévu le <strong className="underline">{formatDate(product.restock_date, 'fr')}</strong>. Vous pouvez réserver dès maintenant votre exemplaire sur WhatsApp avant la rupture.
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -103,10 +125,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             {/* Description */}
             <div className="mt-5">
               <h4 className="text-xs font-semibold text-ink-400 uppercase tracking-wider">
-                Description du produit
+                {language === 'en' ? 'Product description' : 'Description du produit'}
               </h4>
               <p className="mt-2 text-sm text-ink-700 leading-relaxed whitespace-pre-line">
-                {product.description || "Aucune description détaillée renseignée pour cet article."}
+                {product.description || (language === 'en' ? 'No detailed description available for this item.' : 'Aucune description détaillée renseignée pour cet article.')}
               </p>
             </div>
 
@@ -115,7 +137,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               <WhatsAppButton
                 url={whatsappUrl}
                 size="full"
-                label={isAvailable ? "Commander directement sur WhatsApp" : "Réserver maintenant sur WhatsApp"}
+                label={
+                  isAvailable 
+                    ? (language === 'en' ? 'Order directly on WhatsApp' : 'Commander directement sur WhatsApp')
+                    : (language === 'en' ? 'Reserve now on WhatsApp' : 'Réserver maintenant sur WhatsApp')
+                }
                 variant={isAvailable ? "primary" : "secondary"}
               />
             </div>

@@ -5,6 +5,7 @@ import { formatFCFA, buildWhatsAppOrderLink } from '../utils/formatters';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { WhatsAppButton } from './WhatsAppButton';
 import { Eye } from 'lucide-react';
+import { useLanguage } from '../utils/i18n';
 
 interface ProductCardProps {
   product: Product;
@@ -19,7 +20,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onOpenModal,
   index = 0
 }) => {
-  const whatsappUrl = buildWhatsAppOrderLink(store.whatsapp_number, store.name, product, store.slug);
+  const { language, t } = useLanguage();
+  const whatsappUrl = buildWhatsAppOrderLink(
+    store.whatsapp_number,
+    store.name,
+    product,
+    store.slug,
+    language
+  );
   const isAvailable = Boolean(product.is_available);
 
   return (
@@ -49,7 +57,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end p-3">
           <span className="inline-flex items-center gap-1 text-xs font-medium text-white bg-ink-950/60 backdrop-blur-xs px-2.5 py-1 rounded-lg">
             <Eye className="w-3.5 h-3.5" />
-            Voir détails
+            {t.storefront.viewProductDetails}
           </span>
         </div>
 
@@ -66,7 +74,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {Boolean(product.is_featured) && (
           <div className="absolute top-2.5 right-2.5 z-10">
             <span className="inline-flex items-center text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-ink-900 text-white shadow-xs">
-              Top Vente
+              {language === 'en' ? 'Best Seller' : 'Top Vente'}
             </span>
           </div>
         )}
@@ -92,16 +100,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Price & Action Row */}
         <div className="mt-3.5 pt-3 border-t border-ink-100/70 flex flex-col gap-2.5">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs font-medium text-ink-400">Prix public</span>
+            <span className="text-xs font-medium text-ink-400">
+              {language === 'en' ? 'Retail price' : 'Prix public'}
+            </span>
             <span className="font-display font-bold text-base sm:text-lg text-ink-950 tracking-tight">
-              {formatFCFA(product.price)}
+              {formatFCFA(product.price, language)}
             </span>
           </div>
 
           <WhatsAppButton
             url={whatsappUrl}
             size="full"
-            label={isAvailable ? "Discuter sur WhatsApp" : "Réserver sur WhatsApp"}
+            label={
+              isAvailable 
+                ? (language === 'en' ? 'Chat on WhatsApp' : 'Discuter sur WhatsApp')
+                : (language === 'en' ? 'Pre-order on WhatsApp' : 'Réserver sur WhatsApp')
+            }
             variant={isAvailable ? "primary" : "secondary"}
           />
         </div>

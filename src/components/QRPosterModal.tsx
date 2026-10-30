@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Store } from '../types';
 import { generateQRCodeDataUrl } from '../utils/qrCode';
+import { useLanguage } from '../utils/i18n';
 import { X, Printer, Sparkles, MapPin, Share2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
   onClose,
   store
 }) => {
+  const { t, language } = useLanguage();
   const [qrImageUrl, setQrImageUrl] = useState('');
   const storeUrl = `${window.location.origin}/boutique/${store.slug}`;
 
@@ -30,13 +32,13 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
         if (!cancelled) setQrImageUrl(dataUrl);
       })
       .catch(() => {
-        if (!cancelled) toast.error('Impossible de générer le QR code');
+        if (!cancelled) toast.error(language === 'fr' ? 'Impossible de générer le QR code' : 'Could not generate the QR code');
       });
 
     return () => {
       cancelled = true;
     };
-  }, [isOpen, storeUrl]);
+  }, [isOpen, storeUrl, language]);
 
   if (!isOpen) return null;
 
@@ -47,9 +49,9 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(storeUrl);
-      toast.success('Lien de la vitrine copié dans le presse-papier');
+      toast.success(language === 'fr' ? 'Lien de la vitrine copié dans le presse-papier' : 'Store link copied to clipboard');
     } catch {
-      toast.error('Impossible de copier le lien');
+      toast.error(language === 'fr' ? 'Impossible de copier le lien' : 'Could not copy the link');
     }
   };
 
@@ -73,7 +75,7 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
           {/* Header Action Bar */}
           <div className="flex items-center justify-between p-4 border-b border-ink-100 bg-warm-50 print:hidden">
             <span className="text-xs font-bold text-ink-900 uppercase tracking-wider">
-              Affiche Comptoir & QR Code
+              {t.storefront.qrModalTitle}
             </span>
             <div className="flex items-center gap-1.5">
               <button
@@ -81,7 +83,7 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-ink-900 hover:bg-black text-white text-xs font-semibold cursor-pointer shadow-xs"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Imprimer</span>
+                <span>{t.storefront.printPoster}</span>
               </button>
               <button
                 onClick={onClose}
@@ -92,7 +94,7 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
             </div>
           </div>
 
-          {/* Printable Poster Area (formatted for shop counter / door / packaging) */}
+          {/* Printable Poster Area */}
           <div id="printable-poster" className="p-6 sm:p-8 text-center bg-white flex flex-col items-center">
             {/* Store Logo & Branding */}
             <div className="w-16 h-16 rounded-2xl p-1 bg-white border border-ink-200 shadow-sm overflow-hidden mb-3">
@@ -134,17 +136,19 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
 
               <div className="mt-3.5 flex items-center gap-1.5 text-xs font-bold text-ink-900">
                 <Sparkles className="w-4 h-4 text-brand-600" />
-                <span>Scannez avec l'appareil photo</span>
+                <span>
+                  {language === 'fr' ? "Scannez avec l'appareil photo" : 'Scan with your camera'}
+                </span>
               </div>
               <p className="text-[11px] text-ink-500 max-w-xs mt-0.5">
-                Consultez nos articles en stock, arrivages et commandez en 1 clic sur WhatsApp !
+                {t.storefront.qrModalDesc}
               </p>
             </div>
 
             {/* Bottom info */}
             <div className="w-full pt-4 border-t border-ink-100 flex items-center justify-between text-xs text-ink-500">
               <span>WhatsApp : <strong>+{store.whatsapp_number}</strong></span>
-              <span className="font-medium text-brand-700">Vitrine vérifiée</span>
+              <span className="font-medium text-brand-700">{t.storefront.verifiedStore}</span>
             </div>
           </div>
 
@@ -155,14 +159,14 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
               className="flex-1 py-2.5 px-3 rounded-xl border border-ink-200 bg-white hover:bg-warm-100 text-ink-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <Share2 className="w-3.5 h-3.5 text-ink-600" />
-              <span>Copier le lien public</span>
+              <span>{language === 'fr' ? 'Copier le lien public' : 'Copy public link'}</span>
             </button>
             <button
               onClick={handlePrint}
               className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Imprimer l'affiche</span>
+              <span>{t.storefront.printPoster}</span>
             </button>
           </div>
         </motion.div>
