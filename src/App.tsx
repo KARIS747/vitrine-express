@@ -4,6 +4,7 @@ import { dbService, MerchantSession } from './services/db';
 import { Navbar } from './components/Navbar';
 import { LandingView } from './views/LandingView';
 import { StorefrontView } from './views/StorefrontView';
+import { StorefrontSkeleton } from './components/StorefrontSkeleton';
 import { MerchantDashboardView } from './views/MerchantDashboardView';
 import { MerchantLoginView } from './views/MerchantLoginView';
 import { LicenseManagerView } from './views/LicenseManagerView';
@@ -286,40 +287,37 @@ export const App: React.FC = () => {
 
   if (currentView === 'storefront' && isLoading) {
     return (
-      <div className="min-h-screen bg-warm-50 flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-[3px] border-ink-200 border-t-brand-600 rounded-full animate-spin mb-3" />
-        <span className="font-display font-medium text-sm text-ink-700">
-          Chargement de la vitrine...
-        </span>
+      <div className="min-h-screen bg-warm-50 dark:bg-ink-950 flex flex-col font-sans pt-6 transition-colors">
+        <StorefrontSkeleton count={8} />
       </div>
     );
   }
 
   if (currentView === 'storefront' && (loadError || !activeStore)) {
     return (
-      <div className="min-h-screen bg-warm-50 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-warm-50 dark:bg-ink-950 flex flex-col items-center justify-center p-4 transition-colors">
         <Toaster position="top-right" richColors />
-        <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-ink-100 shadow-elevated text-center">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto mb-4 border border-amber-200">
+        <div className="bg-white dark:bg-ink-900 rounded-3xl p-6 sm:p-8 max-w-md w-full border border-ink-100 dark:border-ink-800 shadow-elevated text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 flex items-center justify-center mx-auto mb-4 border border-amber-200 dark:border-amber-800">
             <AlertCircle className="w-7 h-7" />
           </div>
-          <h1 className="font-display font-bold text-xl text-ink-950">
+          <h1 className="font-display font-bold text-xl text-ink-950 dark:text-white">
             Vitrine indisponible
           </h1>
-          <p className="text-sm text-ink-500 mt-2 leading-relaxed">
+          <p className="text-sm text-ink-500 dark:text-ink-400 mt-2 leading-relaxed">
             {loadError ?? "Cette boutique n'est pas accessible pour le moment."}
           </p>
           <div className="mt-5 flex flex-col sm:flex-row gap-2">
             <button
               onClick={() => navigate('landing')}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-ink-950 text-white text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-ink-950 dark:bg-white text-white dark:text-ink-950 text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
             >
               <Home className="w-3.5 h-3.5" />
               Retour à l'accueil
             </button>
             <button
               onClick={() => void loadPublicStore()}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-ink-200 text-ink-700 text-xs font-semibold hover:bg-warm-100 transition-colors cursor-pointer"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-700 text-ink-700 dark:text-ink-200 text-xs font-semibold hover:bg-warm-100 dark:hover:bg-ink-800 transition-colors cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Réessayer
@@ -327,7 +325,7 @@ export const App: React.FC = () => {
           </div>
           <button
             onClick={() => navigate('merchant')}
-            className="mt-4 inline-flex items-center justify-center gap-1.5 text-xs font-medium text-ink-500 hover:text-ink-950 transition-colors cursor-pointer"
+            className="mt-4 inline-flex items-center justify-center gap-1.5 text-xs font-medium text-ink-500 dark:text-ink-400 hover:text-ink-950 dark:hover:text-white transition-colors cursor-pointer"
           >
             <StoreIcon className="w-3.5 h-3.5" />
             Espace gérant
@@ -338,7 +336,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-warm-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-warm-50 dark:bg-ink-950 text-ink-950 dark:text-ink-100 flex flex-col font-sans transition-colors">
       <Toaster position="top-right" richColors />
 
       <Navbar

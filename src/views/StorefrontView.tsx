@@ -5,8 +5,10 @@ import { CategoryTabs } from '../components/CategoryTabs';
 import { ProductCard } from '../components/ProductCard';
 import { ProductModal } from '../components/ProductModal';
 import { QRPosterModal } from '../components/QRPosterModal';
+import { CartDrawer } from '../components/CartDrawer';
+import { CartItem } from '../utils/formatters';
 import { useLanguage } from '../utils/i18n';
-import { Search, ShoppingBag, Check, X } from 'lucide-react';
+import { Search, ShoppingBag, Check, X, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StorefrontViewProps {
@@ -29,11 +31,71 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [filterStockOnly, setFilterStockOnly] = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(`cart_${store.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
     setSelectedCategoryId('all');
     setFilterStockOnly(false);
+    try {
+      const saved = localStorage.getItem(`cart_${store.id}`);
+      setCartItems(saved ? JSON.parse(saved) : []);
+    } catch {
+      setCartItems([]);
+    }
   }, [store.id]);
+
+  // Persist cart per store
+  useEffect(() => {
+    try {
+      localStorage.setItem(`cart_${store.id}`, JSON.stringify(cartItems));
+    } catch {}
+  }, [cartItems, store.id]);
+
+  const handleAddToCart = (product: Product) => {
+    setCartItems((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        toast.info(language === 'fr' ? `Quantité augmentée pour ${product.name}` : `Increased quantity for ${product.name}`);
+        return prev.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      toast.success(language === 'fr' ? `${product.name} ajouté au panier` : `${product.name} added to cart`);
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const handleUpdateQuantity = (productId: string, delta: number) => {
+    setCartItems((prev) =>
+      prev
+        .map((item) => {
+          if (item.product.id === productId) {
+            const nextQty = item.quantity + delta;
+            return nextQty > 0 ? { ...item, quantity: nextQty } : null;
+          }
+          return item;
+        })
+        .filter((item): item is CartItem => item !== null)
+    );
+  };
+
+  const handleRemoveFromCart = (productId: string) => {
+    setCartItems((prev) => prev.filter((item) => item.product.id !== productId));
+  };
+
+  const handleClearCart = () => {
+    setCartItems([]);
+  };
+
+  const totalCartCount = cartItems.reduce((acc, it) => acc + it.quantity, 0);
 
   // Filter products by search query, category, and availability
   const filteredProducts = useMemo(() => {
@@ -88,7 +150,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
 
   return (
     <div
-      className="store-themed min-h-[calc(100vh-3.5rem)] bg-warm-50 flex flex-col pb-20"
+      className="store-themed min-h-[calc(100vh-3.5rem)] bg-warm-50 dark:bg-ink-950 text-ink-950 dark:text-ink-100 flex flex-col pb-20 transition-colors"
       style={{
         '--store-primary': store.theme_primary || '#059669',
         '--store-accent': store.theme_accent || '#F59E0B',
@@ -151,18 +213,34 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
             )}
           </div>
 
-          {/* Quick toggle: show only available */}
-          <button
-            onClick={() => setFilterStockOnly(!filterStockOnly)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
-              filterStockOnly
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                : 'bg-white text-ink-600 border-ink-200 hover:bg-warm-100'
-            }`}
-          >
-            {filterStockOnly && <Check className="w-3.5 h-3.5" />}
-            {filterStockOnly ? stockFilterLabel : stockFilterPrefixLabel}
-          </button>
+          {/* Quick toggle: show only available & Cart trigger */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFilterStockOnly(!filterStockOnly)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
+                filterStockOnly
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  : 'bg-white text-ink-600 border-ink-200 hover:bg-warm-100'
+              }`}
+            >
+              {filterStockOnly && <Check className="w-3.5 h-3.5" />}
+              {filterStockOnly ? stockFilterLabel : stockFilterPrefixLabel}
+            </button>
+
+            {/* Cart trigger button */}
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-ink-900 border border-ink-200 hover:border-ink-300 hover:bg-warm-100 transition-all cursor-pointer shadow-xs"
+            >
+              <ShoppingCart className="w-3.5 h-3.5 store-primary-text" />
+              <span>{t.storefront.cart}</span>
+              {totalCartCount > 0 && (
+                <span className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white store-primary-bg rounded-full">
+                  {totalCartCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Product Grid */}
@@ -174,6 +252,8 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
                 product={product}
                 store={store}
                 onOpenModal={setSelectedProduct}
+                onAddToCart={handleAddToCart}
+                isInCart={cartItems.some((item) => item.product.id === product.id)}
                 index={idx}
               />
             ))}
@@ -211,7 +291,34 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
         product={selectedProduct}
         store={store}
         onClose={() => setSelectedProduct(null)}
+        onAddToCart={handleAddToCart}
+        isInCart={selectedProduct ? cartItems.some((item) => item.product.id === selectedProduct.id) : false}
       />
+
+      {/* Cart Drawer */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        items={cartItems}
+        store={store}
+        onUpdateQuantity={handleUpdateQuantity}
+        onRemoveItem={handleRemoveFromCart}
+        onClearCart={handleClearCart}
+      />
+
+      {/* Floating Cart Button for mobile */}
+      {totalCartCount > 0 && (
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="fixed bottom-5 right-5 z-40 store-primary-bg text-white shadow-elevated rounded-full px-4 py-3 flex items-center gap-2.5 sm:hidden cursor-pointer hover:scale-105 active:scale-95 transition-all"
+        >
+          <ShoppingCart className="w-5 h-5" />
+          <span className="font-display font-bold text-xs">{t.storefront.cart}</span>
+          <span className="bg-white text-ink-950 text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+            {totalCartCount}
+          </span>
+        </button>
+      )}
 
       {/* QR Code & Poster Modal */}
       <QRPosterModal

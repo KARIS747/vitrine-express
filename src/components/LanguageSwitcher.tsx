@@ -42,13 +42,13 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'n
   }
 
   return (
-    <div className={`inline-flex items-center bg-warm-100/80 p-0.5 rounded-lg border border-ink-100 ${className}`}>
+    <div className={`inline-flex items-center bg-warm-100/80 dark:bg-ink-800 p-0.5 rounded-lg border border-ink-100 dark:border-ink-700 ${className}`}>
       <button
         onClick={() => setLanguage('fr')}
         className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
           language === 'fr'
-            ? 'bg-white text-ink-950 shadow-xs'
-            : 'text-ink-500 hover:text-ink-800'
+            ? 'bg-white dark:bg-ink-900 text-ink-950 dark:text-white shadow-xs'
+            : 'text-ink-500 dark:text-ink-400 hover:text-ink-800 dark:hover:text-ink-200'
         }`}
         title="Passer en Français"
         aria-label="Français"
@@ -59,8 +59,8 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'n
         onClick={() => setLanguage('en')}
         className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
           language === 'en'
-            ? 'bg-white text-ink-950 shadow-xs'
-            : 'text-ink-500 hover:text-ink-800'
+            ? 'bg-white dark:bg-ink-900 text-ink-950 dark:text-white shadow-xs'
+            : 'text-ink-500 dark:text-ink-400 hover:text-ink-800 dark:hover:text-ink-200'
         }`}
         title="Switch to English"
         aria-label="English"

@@ -3,6 +3,7 @@ import { ViewMode } from '../types';
 import { Store as StoreIcon, Search, ShieldCheck, UserRound, Home } from 'lucide-react';
 import { useLanguage } from '../utils/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { ThemeToggle } from './ThemeToggle';
 
 interface NavbarProps {
   currentView: ViewMode;
@@ -20,7 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { t } = useLanguage();
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-white/90 backdrop-blur-md border-b border-ink-100">
+    <header className="sticky top-0 z-30 w-full bg-white/90 dark:bg-ink-950/90 backdrop-blur-md border-b border-ink-100 dark:border-ink-800 transition-colors">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
         <button
           onClick={() => onNavigate('landing')}
@@ -30,10 +31,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <StoreIcon className="w-4 h-4" />
           </div>
           <div className="hidden sm:block">
-            <span className="font-display font-bold text-ink-950 text-sm tracking-tight leading-none block">
+            <span className="font-display font-bold text-ink-950 dark:text-white text-sm tracking-tight leading-none block">
               VitrineExpress
             </span>
-            <span className="text-[10px] text-ink-500 font-medium leading-none">
+            <span className="text-[10px] text-ink-500 dark:text-ink-400 font-medium leading-none">
               {t.nav.subTitle}
             </span>
           </div>
@@ -47,12 +48,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               placeholder={t.nav.searchPlaceholder}
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-ink-200 text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-ink-400 bg-warm-50/70"
+              className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-ink-200 dark:border-ink-700 text-xs text-ink-900 dark:text-white placeholder:text-ink-400 focus:outline-none focus:border-ink-400 bg-warm-50/70 dark:bg-ink-900"
             />
           </div>
         )}
 
         <nav className="flex items-center gap-2">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
           {/* Language Switcher */}
           <LanguageSwitcher variant="navbar" />
 
@@ -67,8 +71,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => onNavigate('landing')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
               currentView === 'landing'
-                ? 'bg-ink-900 text-white'
-                : 'text-ink-600 hover:text-ink-950 hover:bg-warm-100'
+                ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-950'
+                : 'text-ink-600 dark:text-ink-300 hover:text-ink-950 dark:hover:text-white hover:bg-warm-100 dark:hover:bg-ink-800'
             }`}
           >
             <Home className="w-3.5 h-3.5" />
@@ -79,8 +83,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => onNavigate('merchant')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
               currentView === 'merchant'
-                ? 'bg-ink-900 text-white'
-                : 'text-ink-600 hover:text-ink-950 hover:bg-warm-100'
+                ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-950'
+                : 'text-ink-600 dark:text-ink-300 hover:text-ink-950 dark:hover:text-white hover:bg-warm-100 dark:hover:bg-ink-800'
             }`}
           >
             <UserRound className="w-3.5 h-3.5" />

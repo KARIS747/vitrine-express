@@ -21,7 +21,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
   const allLabel = language === 'en' ? 'All' : 'Tout';
 
   return (
-    <div className="w-full border-b border-ink-100/90 bg-white/70 backdrop-blur-md sticky top-14 z-20 py-2.5">
+    <div className="w-full border-b border-ink-100/90 dark:border-ink-800 bg-white/70 dark:bg-ink-900/70 backdrop-blur-md sticky top-14 z-20 py-2.5 transition-colors">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1">
           {/* Option Tout voir */}
@@ -30,7 +30,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
             className={`relative px-4 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-colors duration-150 flex items-center gap-1.5 cursor-pointer select-none ${
               selectedCategoryId === 'all'
                 ? 'text-white'
-                : 'text-ink-600 hover:text-ink-950 hover:bg-warm-100/80'
+                : 'text-ink-600 dark:text-ink-400 hover:text-ink-950 dark:hover:text-white hover:bg-warm-100/80 dark:hover:bg-ink-800/80'
             }`}
           >
             {selectedCategoryId === 'all' && (
@@ -56,7 +56,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
                 className={`relative px-4 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-colors duration-150 cursor-pointer select-none ${
                   isSelected
                     ? 'text-white'
-                    : 'text-ink-600 hover:text-ink-950 hover:bg-warm-100/80'
+                    : 'text-ink-600 dark:text-ink-400 hover:text-ink-950 dark:hover:text-white hover:bg-warm-100/80 dark:hover:bg-ink-800/80'
                 }`}
               >
                 {isSelected && (

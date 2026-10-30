@@ -85,6 +85,13 @@ export interface Translations {
     close: string;
     orderPrompt: string;
     remainingDays: string;
+    addToCart: string;
+    cart: string;
+    orderCart: string;
+    clearCart: string;
+    cartEmpty: string;
+    cartItemsCount: string;
+    totalAmount: string;
   };
   // Merchant Dashboard & Login
   merchant: {
@@ -198,6 +205,13 @@ export const translations: Record<Language, Translations> = {
       close: 'Fermer',
       orderPrompt: 'Bonjour {storeName} ! J’ai vu cet article sur votre vitrine en ligne et je souhaite passer commande :',
       remainingDays: 'jours restants',
+      addToCart: 'Ajouter au panier',
+      cart: 'Mon panier',
+      orderCart: 'Commander la sélection sur WhatsApp',
+      clearCart: 'Vider le panier',
+      cartEmpty: 'Votre panier est vide',
+      cartItemsCount: 'articles',
+      totalAmount: 'Total estimé',
     },
     merchant: {
       loginTitle: 'Espace professionnel sécurisé',
@@ -308,6 +322,13 @@ export const translations: Record<Language, Translations> = {
       close: 'Close',
       orderPrompt: 'Hello {storeName}! I saw this item on your online storefront and I would like to place an order:',
       remainingDays: 'days left',
+      addToCart: 'Add to cart',
+      cart: 'My cart',
+      orderCart: 'Order selection on WhatsApp',
+      clearCart: 'Clear cart',
+      cartEmpty: 'Your cart is empty',
+      cartItemsCount: 'items',
+      totalAmount: 'Estimated total',
     },
     merchant: {
       loginTitle: 'Secure Merchant Portal',

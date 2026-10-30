@@ -4,13 +4,15 @@ import { Store, Product } from '../types';
 import { formatFCFA, buildWhatsAppOrderLink } from '../utils/formatters';
 import { AvailabilityBadge } from './AvailabilityBadge';
 import { WhatsAppButton } from './WhatsAppButton';
-import { Eye } from 'lucide-react';
+import { Eye, Plus, Check } from 'lucide-react';
 import { useLanguage } from '../utils/i18n';
 
 interface ProductCardProps {
   product: Product;
   store: Store;
   onOpenModal: (product: Product) => void;
+  onAddToCart?: (product: Product) => void;
+  isInCart?: boolean;
   index?: number;
 }
 
@@ -18,6 +20,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   store,
   onOpenModal,
+  onAddToCart,
+  isInCart = false,
   index = 0
 }) => {
   const { language, t } = useLanguage();
@@ -39,12 +43,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         delay: Math.min(index * 0.04, 0.35),
         ease: [0.215, 0.61, 0.355, 1] 
       }}
-      className="group relative flex flex-col bg-white rounded-2xl border border-ink-100/90 shadow-subtle hover:shadow-card hover:border-ink-200/90 transition-all duration-200 overflow-hidden"
+      className="group relative flex flex-col bg-white dark:bg-ink-900 rounded-2xl border border-ink-100/90 dark:border-ink-800 shadow-subtle hover:shadow-card hover:border-ink-200/90 dark:hover:border-ink-700 transition-all duration-200 overflow-hidden"
     >
       {/* Image Container with 4:3 ratio */}
       <div 
         onClick={() => onOpenModal(product)}
-        className="relative w-full aspect-[4/3] bg-warm-100 overflow-hidden cursor-pointer"
+        className="relative w-full aspect-[4/3] bg-warm-100 dark:bg-ink-800 overflow-hidden cursor-pointer"
       >
         <img
           src={product.image_url}
@@ -85,39 +89,62 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div>
           <h3 
             onClick={() => onOpenModal(product)}
-            className="font-display font-semibold text-ink-900 text-sm sm:text-base leading-snug line-clamp-1 store-title-hover cursor-pointer"
+            className="font-display font-semibold text-ink-900 dark:text-white text-sm sm:text-base leading-snug line-clamp-1 store-title-hover cursor-pointer"
           >
             {product.name}
           </h3>
 
           {product.description && (
-            <p className="mt-1 text-xs text-ink-600 line-clamp-2 leading-relaxed">
+            <p className="mt-1 text-xs text-ink-600 dark:text-ink-400 line-clamp-2 leading-relaxed">
               {product.description}
             </p>
           )}
         </div>
 
         {/* Price & Action Row */}
-        <div className="mt-3.5 pt-3 border-t border-ink-100/70 flex flex-col gap-2.5">
+        <div className="mt-3.5 pt-3 border-t border-ink-100/70 dark:border-ink-800 flex flex-col gap-2.5">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs font-medium text-ink-400">
+            <span className="text-xs font-medium text-ink-400 dark:text-ink-500">
               {language === 'en' ? 'Retail price' : 'Prix public'}
             </span>
-            <span className="font-display font-bold text-base sm:text-lg text-ink-950 tracking-tight">
+            <span className="font-display font-bold text-base sm:text-lg text-ink-950 dark:text-white tracking-tight">
               {formatFCFA(product.price, language)}
             </span>
           </div>
 
-          <WhatsAppButton
-            url={whatsappUrl}
-            size="full"
-            label={
-              isAvailable 
-                ? (language === 'en' ? 'Chat on WhatsApp' : 'Discuter sur WhatsApp')
-                : (language === 'en' ? 'Pre-order on WhatsApp' : 'Réserver sur WhatsApp')
-            }
-            variant={isAvailable ? "primary" : "secondary"}
-          />
+          <div className="flex items-center gap-2">
+            {onAddToCart && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToCart(product);
+                }}
+                className={`p-2.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-center shrink-0 ${
+                  isInCart
+                    ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-950 border-ink-900 dark:border-white shadow-xs'
+                    : 'bg-warm-50 dark:bg-ink-800 text-ink-700 dark:text-ink-300 border-ink-200 dark:border-ink-700 hover:bg-white dark:hover:bg-ink-700 hover:border-ink-400'
+                }`}
+                title={isInCart ? 'Dans le panier' : t.storefront.addToCart}
+                aria-label={t.storefront.addToCart}
+              >
+                {isInCart ? <Check className="w-4 h-4 text-emerald-400" /> : <Plus className="w-4 h-4" />}
+              </button>
+            )}
+
+            <div className="flex-1">
+              <WhatsAppButton
+                url={whatsappUrl}
+                size="full"
+                label={
+                  isAvailable 
+                    ? (language === 'en' ? 'Direct WhatsApp' : 'Direct WhatsApp')
+                    : (language === 'en' ? 'Pre-order' : 'Réserver')
+                }
+                variant={isAvailable ? "primary" : "secondary"}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>

@@ -45,6 +45,71 @@ export function getDaysRemaining(dateString?: string | null): number {
   return Math.max(0, diffDays);
 }
 
+export interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
+/**
+ * Génère le lien WhatsApp officiel pour une commande multi-produits (panier)
+ */
+export function buildWhatsAppCartOrderLink(
+  whatsappNumber: string,
+  storeName: string,
+  items: CartItem[],
+  storeSlug?: string,
+  lang: Language = 'fr'
+): string {
+  const cleanPhone = whatsappNumber.replace(/[^0-9]/g, '');
+  const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+  if (lang === 'en') {
+    const itemsList = items
+      .map(
+        (item, idx) =>
+          `${idx + 1}. *${item.product.name}* x${item.quantity} — ${formatFCFA(item.product.price * item.quantity, 'en')}${
+            !item.product.is_available ? ' _(restocking)_' : ''
+          }`
+      )
+      .join('\n');
+
+    const message = [
+      `Hello *${storeName}*!`,
+      ``,
+      `I have prepared an order from your online storefront:`,
+      itemsList,
+      ``,
+      `💰 *Total: ${formatFCFA(total, 'en')}*`,
+      ``,
+      `Could you please confirm availability and tell me how we can proceed with payment and delivery? Thank you!`
+    ].join('\n');
+
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  }
+
+  const itemsList = items
+    .map(
+      (item, idx) =>
+        `${idx + 1}. *${item.product.name}* x${item.quantity} — ${formatFCFA(item.product.price * item.quantity, 'fr')}${
+          !item.product.is_available ? ' _(en cours de réappro)_' : ''
+        }`
+    )
+    .join('\n');
+
+  const message = [
+    `Bonjour *${storeName}* !`,
+    ``,
+    `J'ai préparé une commande depuis votre vitrine en ligne :`,
+    itemsList,
+    ``,
+    `💰 *Total : ${formatFCFA(total, 'fr')}*`,
+    ``,
+    `Pouvez-vous me confirmer la disponibilité et les modalités de livraison ? Merci !`
+  ].join('\n');
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+}
+
 /**
  * Génère le lien WhatsApp officiel pré-rempli avec politesse et détails du produit
  * s'adapte à la langue (FR ou EN)

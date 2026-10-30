@@ -19,7 +19,7 @@ export const StoreHeader: React.FC<StoreHeaderProps> = ({
   const whatsappUrl = buildWhatsAppContactLink(store.whatsapp_number, store.name, language);
 
   return (
-    <div className="relative w-full bg-white border-b border-ink-100">
+    <div className="relative w-full bg-white dark:bg-ink-900 border-b border-ink-100 dark:border-ink-800 transition-colors">
       {/* Banner / Enseigne photo */}
       <div className="relative w-full h-36 sm:h-52 bg-gradient-to-r from-ink-900 to-ink-800 overflow-hidden">
         {store.banner_url ? (
@@ -40,7 +40,7 @@ export const StoreHeader: React.FC<StoreHeaderProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-4 sm:pb-6 gap-4">
           {/* Logo & Text info */}
           <div className="flex items-start gap-3.5 sm:gap-5">
-            <div className="relative -mt-12 sm:-mt-16 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white p-1 shadow-elevated border border-ink-100 shrink-0 overflow-hidden">
+            <div className="relative -mt-12 sm:-mt-16 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white dark:bg-ink-900 p-1 shadow-elevated border border-ink-100 dark:border-ink-800 shrink-0 overflow-hidden">
               {store.logo_url ? (
                 <img
                   src={store.logo_url}
@@ -56,23 +56,23 @@ export const StoreHeader: React.FC<StoreHeaderProps> = ({
 
             <div className="flex-1 pt-1 sm:pt-2 pb-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-display font-bold text-xl sm:text-2xl text-ink-950 tracking-tight">
+                <h1 className="font-display font-bold text-xl sm:text-2xl text-ink-950 dark:text-white tracking-tight">
                   {store.name}
                 </h1>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  <CheckCircle className="w-3 h-3 text-emerald-600" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
+                  <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   {t.storefront.verifiedStore}
                 </span>
               </div>
 
               {store.tagline && (
-                <p className="text-xs sm:text-sm text-ink-600 mt-0.5 font-medium line-clamp-1">
+                <p className="text-xs sm:text-sm text-ink-600 dark:text-ink-400 mt-0.5 font-medium line-clamp-1">
                   {store.tagline}
                 </p>
               )}
 
               {/* Location Tag */}
-              <div className="flex items-center gap-1.5 text-xs text-ink-500 mt-1.5 flex-wrap">
+              <div className="flex items-center gap-1.5 text-xs text-ink-500 dark:text-ink-400 mt-1.5 flex-wrap">
                 <MapPin className="w-3.5 h-3.5 store-primary-text shrink-0" />
                 <span>
                   {store.city} {store.quarter ? `• ${store.quarter}` : ''}
