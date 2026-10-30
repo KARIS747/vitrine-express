@@ -19,11 +19,13 @@ import {
   Loader2,
   LogOut,
   MapPin,
+  MessageCircle,
   MessageSquare,
   Package,
   Plus,
   RefreshCw,
   Search,
+  Send,
   ShieldCheck,
   Store as StoreIcon,
   X,
@@ -66,17 +68,26 @@ async function copyText(text: string, successMessage: string) {
 
 function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: string) {
   const lines = [
-    `Votre vitrine ${store.name} est prête.`,
+    `👋 Bonjour ! Votre vitrine ${store.name} est prête sur VitrineExpress.`,
     '',
-    `Lien client : ${window.location.origin}/boutique/${store.slug}`,
-    `Clé de licence : ${licenseKey ?? store.license_key ?? '—'}`,
+    `🏪 Votre vitrine client : ${window.location.origin}/boutique/${store.slug}`,
+    `⚙️ Votre espace de gestion : ${window.location.origin}/merchant`,
+    '',
+    '🔐 Vos identifiants de connexion :',
+    `• Clé de licence : ${licenseKey ?? store.license_key ?? '—'}`,
   ];
-  if (pinCode) lines.push(`Code PIN : ${pinCode}`);
+  if (pinCode) lines.push(`• Code PIN secret : ${pinCode}`);
   lines.push(
-    `Produits inclus : ${store.max_products} articles`,
-    `Expiration : ${formatDate(store.expires_at)}`,
     '',
-    'Conservez ces accès : ils vous permettent de gérer votre catalogue et vos arrivages.',
+    `📦 Formule : jusqu'à ${store.max_products} produits`,
+    `📅 Valable jusqu'au : ${formatDate(store.expires_at)}`,
+    '',
+    '💡 Pour démarrer :',
+    '1. Connectez-vous sur votre espace de gestion.',
+    '2. Ajoutez vos photos de produits, vos prix et vos arrivages.',
+    '3. Imprimez votre affiche QR code pour votre comptoir !',
+    '',
+    'En cas de besoin, contactez Karis.',
   );
   return lines.join('\n');
 }
@@ -952,6 +963,21 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
               </button>
 
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <a
+                  href={`https://wa.me/${createdAccess.store.whatsapp_number.replace(/\D/g, '')}?text=${encodeURIComponent(
+                    buildOnboardingMessage(
+                      createdAccess.store,
+                      createdAccess.licenseKey,
+                      createdAccess.pinCode,
+                    )
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  Envoyer par WhatsApp
+                </a>
                 <button
                   onClick={() => void copyText(
                     buildOnboardingMessage(
@@ -965,17 +991,6 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 >
                   <Copy className="w-3.5 h-3.5" />
                   Copier les accès
-                </button>
-                <button
-                  onClick={() => {
-                    const store = createdAccess.store;
-                    setCreatedAccess(null);
-                    onSelectStore(store);
-                  }}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-ink-950 hover:bg-black text-white text-xs font-semibold transition-colors cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Voir la vitrine
                 </button>
               </div>
 
