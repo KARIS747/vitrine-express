@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vitrine-express-v3';
+const CACHE_NAME = 'vitrine-express-v4';
 const APP_SHELL = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -26,6 +26,31 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Cache API publique en lecture seule : Network First avec mise en cache
+  if (url.pathname.startsWith('/api/stores')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => undefined);
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          return new Response(JSON.stringify({ error: "Connexion hors-ligne" }), {
+            status: 503,
+            headers: { "Content-Type": "application/json" }
+          });
+        })
+    );
+    return;
+  }
+
+  // Ne pas cacher les routes marchands ou admin sensibles
   if (url.pathname.startsWith('/api/')) return;
 
   if (request.mode === 'navigate') {

@@ -9,12 +9,13 @@ import { MerchantLoginView } from './views/MerchantLoginView';
 import { LicenseManagerView } from './views/LicenseManagerView';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { Toaster, toast } from 'sonner';
-import { AlertCircle, Home, RefreshCw, Store as StoreIcon } from 'lucide-react';
+import { AlertCircle, Home, RefreshCw, Store as StoreIcon, WifiOff } from 'lucide-react';
 
 interface StoreData {
   store: Store;
   categories: Category[];
   products: Product[];
+  isOffline?: boolean;
 }
 
 function viewFromPath(): ViewMode {
@@ -55,10 +56,16 @@ export const App: React.FC = () => {
   const [merchantData, setMerchantData] = useState<StoreData | null>(null);
   const [isMerchantLoading, setIsMerchantLoading] = useState(false);
 
+  const [isOfflineData, setIsOfflineData] = useState(false);
+
   const loadLandingStores = useCallback(async () => {
     setIsStoresLoading(true);
     try {
-      setPublicStores(await dbService.getAllStores());
+      const res = await dbService.getAllStores();
+      setPublicStores(res.stores);
+      if (res.isOffline) {
+        setIsOfflineData(true);
+      }
     } finally {
       setIsStoresLoading(false);
     }
@@ -90,6 +97,11 @@ export const App: React.FC = () => {
       setActiveStore(data.store);
       setCategories(data.categories);
       setProducts(data.products);
+      if (data.isOffline) {
+        setIsOfflineData(true);
+      } else {
+        setIsOfflineData(false);
+      }
 
       if (viewFromPath() === 'storefront') {
         window.history.replaceState({}, '', storePath(data.store.slug));
@@ -207,6 +219,11 @@ export const App: React.FC = () => {
       setActiveStore(data.store);
       setCategories(data.categories);
       setProducts(data.products);
+      if (data.isOffline) {
+        setIsOfflineData(true);
+      } else {
+        setIsOfflineData(false);
+      }
       setSearchQuery('');
       setLoadError(null);
       setCurrentView('storefront');
@@ -259,6 +276,11 @@ export const App: React.FC = () => {
       setActiveStore(data.store);
       setCategories(data.categories);
       setProducts(data.products);
+      if (data.isOffline) {
+        setIsOfflineData(true);
+      } else {
+        setIsOfflineData(false);
+      }
     }
   };
 
@@ -325,6 +347,13 @@ export const App: React.FC = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
+
+      {isOfflineData && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-center text-xs text-amber-800 font-medium flex items-center justify-center gap-1.5">
+          <WifiOff className="w-3.5 h-3.5 text-amber-600" />
+          <span>Mode hors-ligne : affichage des données sauvegardées en cache</span>
+        </div>
+      )}
 
       {currentView === 'landing' && (
         <LandingView

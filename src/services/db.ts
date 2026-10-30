@@ -136,30 +136,71 @@ class DatabaseService {
   //  VITRINE PUBLIQUE
   // ----------------------------------------------------------
 
-  async getAllStores(): Promise<Store[]> {
+  async getAllStores(): Promise<{ stores: Store[]; isOffline?: boolean }> {
+    const cacheKey = 've_cache_all_stores';
     try {
       const res = await fetch(`${API_BASE}/stores`);
       const data = await parseJson(res);
-      if (!res.ok) return [];
-      return Array.isArray(data) ? data : (data.stores ?? []);
+      if (res.ok) {
+        const stores = Array.isArray(data) ? data : (data.stores ?? []);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ stores, cachedAt: Date.now() }));
+        } catch {}
+        return { stores };
+      }
     } catch {
-      return [];
+      // Échec réseau : fallback sur le cache local
     }
+
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed?.stores)) {
+          return { stores: parsed.stores, isOffline: true };
+        }
+      }
+    } catch {}
+
+    return { stores: [] };
   }
 
-  async getStoreBySlug(slug: string): Promise<{ store: Store; categories: Category[]; products: Product[] } | null> {
+  async getStoreBySlug(slug: string): Promise<{ store: Store; categories: Category[]; products: Product[]; isOffline?: boolean } | null> {
+    const cacheKey = `ve_cache_store_${slug.toLowerCase()}`;
     try {
       const res = await fetch(`${API_BASE}/stores/${encodeURIComponent(slug)}`);
       const data = await parseJson(res);
-      if (!res.ok || data.error) return null;
-      return {
-        store: data.store,
-        categories: data.categories ?? [],
-        products: data.products ?? [],
-      };
+      if (res.ok && !data.error && data.store) {
+        const payload = {
+          store: data.store,
+          categories: data.categories ?? [],
+          products: data.products ?? [],
+        };
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ ...payload, cachedAt: Date.now() }));
+        } catch {}
+        return payload;
+      }
     } catch {
-      return null;
+      // Échec réseau : on tente le fallback depuis le cache local persistant
     }
+
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.store) {
+          return {
+            store: parsed.store,
+            categories: parsed.categories ?? [],
+            products: parsed.products ?? [],
+            isOffline: true,
+          };
+        }
+      }
+    } catch {}
+
+    return null;
   }
 
   // ----------------------------------------------------------
