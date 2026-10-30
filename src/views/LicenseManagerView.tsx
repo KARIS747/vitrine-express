@@ -99,6 +99,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(dbService.getAdminKey()));
   const [adminKeyInput, setAdminKeyInput] = useState('');
   const [showAdminKey, setShowAdminKey] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const [stores, setStores] = useState<Store[]>([]);
@@ -140,7 +141,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     setIsLoggingIn(true);
     setError(null);
     try {
-      const result = await dbService.loginAdmin(adminKeyInput.trim());
+      const result = await dbService.loginAdmin(adminKeyInput.trim(), rememberDevice);
       if (!result.success) {
         setError(result.error ?? 'Clé administrateur invalide');
         toast.error(result.error ?? 'Clé administrateur invalide');
@@ -405,6 +406,22 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 >
                   {showAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
+              </div>
+
+              <div className="flex items-center gap-2 pt-0.5">
+                <input
+                  type="checkbox"
+                  id="remember-admin"
+                  checked={rememberDevice}
+                  onChange={(e) => setRememberDevice(e.target.checked)}
+                  className="w-4 h-4 rounded border-ink-300 text-amber-500 focus:ring-amber-400 accent-amber-500 cursor-pointer"
+                />
+                <label
+                  htmlFor="remember-admin"
+                  className="text-xs text-ink-600 select-none cursor-pointer"
+                >
+                  Mémoriser sur cet appareil (rester connecté)
+                </label>
               </div>
 
               {error && (

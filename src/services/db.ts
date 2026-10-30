@@ -44,22 +44,27 @@ export interface StoreSettingsPayload {
 
 function readStorage(key: string): string | null {
   try {
-    return sessionStorage.getItem(key);
+    return localStorage.getItem(key) ?? sessionStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-function writeStorage(key: string, value: string) {
+function writeStorage(key: string, value: string, remember = false) {
   try {
-    sessionStorage.setItem(key, value);
+    if (remember) {
+      localStorage.setItem(key, value);
+    } else {
+      sessionStorage.setItem(key, value);
+    }
   } catch {
-    // sessionStorage peut être indisponible (navigation privée restrictive).
+    // Stockage peut être indisponible (navigation privée restrictive).
   }
 }
 
 function removeStorage(key: string) {
   try {
+    localStorage.removeItem(key);
     sessionStorage.removeItem(key);
   } catch {
     // ignore
@@ -104,9 +109,9 @@ class DatabaseService {
   //  SESSIONS
   // ----------------------------------------------------------
 
-  setAdminKey(key: string) {
+  setAdminKey(key: string, remember = false) {
     this.adminKey = key;
-    writeStorage('ve_admin_key', key);
+    writeStorage('ve_admin_key', key, remember);
   }
 
   getAdminKey(): string | null {
@@ -450,7 +455,7 @@ class DatabaseService {
   //  ADMIN KARIS
   // ----------------------------------------------------------
 
-  async loginAdmin(key: string): Promise<{ success: boolean; stores?: Store[]; error?: string }> {
+  async loginAdmin(key: string, remember = false): Promise<{ success: boolean; stores?: Store[]; error?: string }> {
     try {
       const res = await fetch(`${API_BASE}/admin/licenses`, {
         headers: { 'X-Admin-Key': key },
@@ -459,7 +464,7 @@ class DatabaseService {
       if (!res.ok || !data.success) {
         return { success: false, error: data.error ?? 'Clé administrateur invalide' };
       }
-      this.setAdminKey(key);
+      this.setAdminKey(key, remember);
       return { success: true, stores: data.stores ?? [] };
     } catch {
       return { success: false, error: 'Erreur réseau' };
