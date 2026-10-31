@@ -1,0 +1,9 @@
+# robots.txt for VitrineExpress
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /merchant
+Disallow: /api/admin/
+Disallow: /api/merchant/
+
+Sitemap: https://vitrine-express.pages.dev/sitemap.xml

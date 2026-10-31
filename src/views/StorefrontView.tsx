@@ -6,6 +6,7 @@ import { ProductCard } from '../components/ProductCard';
 import { ProductModal } from '../components/ProductModal';
 import { QRPosterModal } from '../components/QRPosterModal';
 import { CartDrawer } from '../components/CartDrawer';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import { CartItem } from '../utils/formatters';
 import { useLanguage } from '../utils/i18n';
 import { Search, ShoppingBag, Check, X, ShoppingCart } from 'lucide-react';
@@ -17,6 +18,7 @@ interface StorefrontViewProps {
   products: Product[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onGoHome?: () => void;
 }
 
 export const StorefrontView: React.FC<StorefrontViewProps> = ({
@@ -25,6 +27,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
   products,
   searchQuery,
   onSearchChange,
+  onGoHome,
 }) => {
   const { t, language } = useLanguage();
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
@@ -148,6 +151,8 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
   const stockFilterLabel = language === 'fr' ? 'En stock uniquement' : 'In stock only';
   const stockFilterPrefixLabel = language === 'fr' ? 'Filtrer : En stock uniquement' : 'Filter: In stock only';
 
+  const selectedCategoryObj = categories.find(c => c.id === selectedCategoryId);
+
   return (
     <div
       className="store-themed min-h-[calc(100vh-3.5rem)] bg-warm-50 dark:bg-ink-950 text-ink-950 dark:text-ink-100 flex flex-col pb-20 transition-colors"
@@ -162,6 +167,23 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
         onOpenQR={() => setIsQRModalOpen(true)}
         onShare={handleShare}
       />
+
+      {/* Breadcrumbs Navigation */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full pt-3">
+        <Breadcrumbs
+          onHomeClick={onGoHome || (() => { window.location.href = '/'; })}
+          items={[
+            {
+              label: store.name,
+              onClick: selectedCategoryId !== 'all' ? () => setSelectedCategoryId('all') : undefined,
+              active: selectedCategoryId === 'all',
+            },
+            ...(selectedCategoryId !== 'all' && selectedCategoryObj
+              ? [{ label: selectedCategoryObj.name, active: true }]
+              : []),
+          ]}
+        />
+      </div>
 
       {/* Category Pills Slider */}
       <CategoryTabs

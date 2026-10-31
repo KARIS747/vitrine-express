@@ -60,4 +60,4 @@ export interface License {
   created_at?: string;
 }
 
-export type ViewMode = 'landing' | 'storefront' | 'merchant' | 'admin' | 'print-poster';
+export type ViewMode = 'landing' | 'storefront' | 'merchant' | 'admin' | 'print-poster' | 'not-found';

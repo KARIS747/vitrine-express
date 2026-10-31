@@ -1,0 +1,22 @@
+# VitrineExpress
+
+> Solution ultra-rapide de catalogues en ligne et commande WhatsApp pour les commerçants africains (Cameroun, Douala, Yaoundé et sous-région).
+
+VitrineExpress permet aux commerçants de digitaliser leur catalogue produit en quelques minutes avec un tunnel de commande direct via WhatsApp, sans commission sur les ventes et sans intermédiaire de paiement lourd.
+
+## Fonctionnalités Principales
+- **Vitrines Produits Réactives & Mobiles** : Navigation fluide par catégorie, recherche instantanée, mode sombre et bilingue (Français / Anglais).
+- **Panier Multi-Produits & Commande WhatsApp** : Sélection de plusieurs articles et envoi du bon de commande structuré pré-rempli dans la discussion WhatsApp du vendeur.
+- **Offline-First & PWA** : Consultation du catalogue même en cas de mauvaise connectivité grâce à la mise en cache locale.
+- **Espace Marchand Autonome** : Gestion des articles, photos, promotions, stocks et personnalisation de la boutique (couleurs, logo, bannière, coordonnées).
+- **Licence Sécurisée** : Accès commerçant sécurisé par clé de licence unique et code PIN à 4 chiffres.
+
+## Architecture Technique
+- **Frontend** : React 18, TypeScript, Tailwind CSS, Lucide Icons, Framer Motion.
+- **Backend & Edge** : Cloudflare Pages Functions, Cloudflare D1 (SQLite distribué).
+- **Distribution** : PWA Installable, hébergement Cloudflare Global Edge Network.
+
+## Liens Utiles
+- Accueil & Découverte : https://vitrine-express.pages.dev/
+- Espace Vendeur : https://vitrine-express.pages.dev/merchant
+- API Endpoints : https://vitrine-express.pages.dev/api/stores

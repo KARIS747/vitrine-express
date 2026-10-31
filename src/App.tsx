@@ -9,6 +9,8 @@ import { MerchantDashboardView } from './views/MerchantDashboardView';
 import { MerchantLoginView } from './views/MerchantLoginView';
 import { LicenseManagerView } from './views/LicenseManagerView';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { NotFoundView } from './views/NotFoundView';
+import { updatePageSeo } from './utils/seo';
 import { Toaster, toast } from 'sonner';
 import { AlertCircle, Home, RefreshCw, Store as StoreIcon, WifiOff } from 'lucide-react';
 
@@ -21,13 +23,14 @@ interface StoreData {
 
 function viewFromPath(): ViewMode {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (path === '/') {
+    if (new URLSearchParams(window.location.search).get('store')) return 'storefront';
+    return 'landing';
+  }
   if (path === '/admin') return 'admin';
   if (path === '/merchant' || path.startsWith('/merchant/')) return 'merchant';
   if (path.startsWith('/boutique/')) return 'storefront';
-  if (path === '/' && new URLSearchParams(window.location.search).get('store')) {
-    return 'storefront';
-  }
-  return 'landing';
+  return 'not-found';
 }
 
 function slugFromLocation(): string | null {
@@ -103,6 +106,14 @@ export const App: React.FC = () => {
       } else {
         setIsOfflineData(false);
       }
+
+      // Update dynamic SEO for storefront
+      updatePageSeo({
+        title: `${data.store.name} — Vitrine Officielle & Catalogue`,
+        description: data.store.description || data.store.tagline || `Découvrez le catalogue et commandez sur WhatsApp chez ${data.store.name} à ${data.store.city}.`,
+        canonicalPath: storePath(data.store.slug),
+        image: data.store.banner_url || data.store.logo_url,
+      });
 
       if (viewFromPath() === 'storefront') {
         window.history.replaceState({}, '', storePath(data.store.slug));
@@ -181,6 +192,11 @@ export const App: React.FC = () => {
       setCurrentView('landing');
       setLoadError(null);
       window.history.pushState({}, '', '/');
+      updatePageSeo({
+        title: 'VitrineExpress — Vitrines Produits & Commandes WhatsApp',
+        description: 'Scannez, découvrez et commandez : vitrines WhatsApp rapides et élégantes pour les commerçants du Cameroun.',
+        canonicalPath: '/',
+      });
       void loadLandingStores();
       return;
     }
@@ -202,6 +218,11 @@ export const App: React.FC = () => {
     if (view === 'merchant') {
       setCurrentView('merchant');
       window.history.pushState({}, '', '/merchant');
+      updatePageSeo({
+        title: 'Espace Gérant & Gestion de Boutique',
+        description: 'Connectez-vous à votre espace gérant VitrineExpress pour gérer vos produits, stocks et commandes.',
+        canonicalPath: '/merchant',
+      });
       if (merchantSession) void loadMerchantData();
       return;
     }
@@ -209,6 +230,21 @@ export const App: React.FC = () => {
     if (view === 'admin') {
       setCurrentView('admin');
       window.history.pushState({}, '', '/admin');
+      updatePageSeo({
+        title: 'Administration Plateforme',
+        description: 'Gestion des licences et des boutiques VitrineExpress.',
+        canonicalPath: '/admin',
+      });
+      return;
+    }
+
+    if (view === 'not-found') {
+      setCurrentView('not-found');
+      updatePageSeo({
+        title: 'Page non trouvée (404)',
+        description: 'La page demandée est introuvable sur VitrineExpress.',
+      });
+      return;
     }
   };
 
@@ -370,6 +406,15 @@ export const App: React.FC = () => {
           products={products}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onGoHome={() => navigate('landing')}
+        />
+      )}
+
+      {currentView === 'not-found' && (
+        <NotFoundView
+          onGoHome={() => navigate('landing')}
+          onGoMerchant={() => navigate('merchant')}
+          attemptedPath={window.location.pathname}
         />
       )}
 
