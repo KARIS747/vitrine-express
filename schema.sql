@@ -95,7 +95,22 @@ CREATE TABLE IF NOT EXISTS auth_attempts (
 
 CREATE INDEX IF NOT EXISTS idx_auth_attempts_updated ON auth_attempts(updated_at);
 
--- 6. Données de démonstration réalistes pour démarrer immédiatement
+-- 6. Sessions serveur (cookies HttpOnly) : marchand et administrateur
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY,           -- SHA-256 du jeton (jamais le jeton en clair)
+    scope TEXT NOT NULL,                   -- 'merchant' | 'admin'
+    store_id TEXT,                         -- NULL pour une session admin
+    expires_at TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TEXT,
+    user_agent TEXT,
+    FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_store ON sessions(store_id);
+
+-- 7. Données de démonstration réalistes pour démarrer immédiatement
 INSERT OR IGNORE INTO stores (
     id, slug, name, tagline, description, whatsapp_number, phone_call, 
     city, quarter, address_notes, logo_url, banner_url, license_key, pin_code, 

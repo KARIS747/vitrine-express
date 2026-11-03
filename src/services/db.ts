@@ -10,8 +10,6 @@ const API_BASE = '/api';
 export interface MerchantSession {
   storeId: string;
   storeSlug: string;
-  licenseKey: string;
-  pinCode: string;
 }
 
 export interface ApiResult<T = undefined> {
@@ -86,15 +84,13 @@ function loadMerchantSession(): MerchantSession | null {
     const raw = readStorage('ve_merchant_session');
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed?.storeId || !parsed?.storeSlug || !parsed?.licenseKey || !parsed?.pinCode) {
+    if (!parsed?.storeId || !parsed?.storeSlug) {
       removeStorage('ve_merchant_session');
       return null;
     }
     return {
       storeId: String(parsed.storeId),
       storeSlug: String(parsed.storeSlug),
-      licenseKey: String(parsed.licenseKey),
-      pinCode: String(parsed.pinCode),
     };
   } catch {
     return null;
@@ -102,29 +98,31 @@ function loadMerchantSession(): MerchantSession | null {
 }
 
 class DatabaseService {
-  private adminKey: string | null = readStorage('ve_admin_key');
+  // Marqueur non sensible : le cookie de session reste HttpOnly côté serveur.
+  private adminAuthenticated = readStorage('ve_admin_session_hint') === '1';
   private merchantSession: MerchantSession | null = loadMerchantSession();
 
   // ----------------------------------------------------------
   //  SESSIONS
   // ----------------------------------------------------------
 
-  setAdminKey(key: string, remember = false) {
-    this.adminKey = key;
-    writeStorage('ve_admin_key', key, remember);
+  isAdminAuthenticated(): boolean {
+    return this.adminAuthenticated;
   }
 
-  getAdminKey(): string | null {
-    return this.adminKey;
+  private setAdminAuthenticated(remember = false) {
+    this.adminAuthenticated = true;
+    writeStorage('ve_admin_session_hint', '1', remember);
   }
 
   clearAdminKey() {
-    this.adminKey = null;
-    removeStorage('ve_admin_key');
+    this.adminAuthenticated = false;
+    removeStorage('ve_admin_session_hint');
+    void fetch(`${API_BASE}/admin/logout`, { method: 'POST' }).catch(() => {});
   }
 
-  setMerchantSession(storeId: string, storeSlug: string, licenseKey: string, pinCode: string) {
-    this.merchantSession = { storeId, storeSlug, licenseKey, pinCode };
+  setMerchantSession(storeId: string, storeSlug: string) {
+    this.merchantSession = { storeId, storeSlug };
     writeStorage('ve_merchant_session', JSON.stringify(this.merchantSession));
   }
 
@@ -135,6 +133,23 @@ class DatabaseService {
   clearMerchantSession() {
     this.merchantSession = null;
     removeStorage('ve_merchant_session');
+  }
+
+  async validateMerchantSession(): Promise<{ valid: boolean; offline?: boolean }> {
+    if (!this.merchantSession) return { valid: false };
+    try {
+      const res = await fetch(`${API_BASE}/merchant/session`);
+      if (res.status === 401 || res.status === 403) return { valid: false };
+      return { valid: true, offline: !res.ok };
+    } catch {
+      // Pas de réseau : on conserve la session locale pour le mode hors-ligne.
+      return { valid: true, offline: true };
+    }
+  }
+
+  logoutMerchant() {
+    void fetch(`${API_BASE}/merchant/logout`, { method: 'POST' }).catch(() => {});
+    this.clearMerchantSession();
   }
 
   // ----------------------------------------------------------
@@ -224,12 +239,7 @@ class DatabaseService {
         return { success: false, error: data.error ?? 'Identifiants invalides' };
       }
 
-      this.setMerchantSession(
-        data.store.id,
-        data.store.slug,
-        licenseKey.trim(),
-        pinCode.trim(),
-      );
+      this.setMerchantSession(data.store.id, data.store.slug);
 
       return { success: true, store: data.store };
     } catch {
@@ -254,8 +264,6 @@ class DatabaseService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId,
-          licenseKey: session.licenseKey,
-          pinCode: session.pinCode,
           settings,
         }),
       });
@@ -286,8 +294,6 @@ class DatabaseService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId,
-          licenseKey: session.licenseKey,
-          pinCode: session.pinCode,
           product: {
             name: productData.name,
             description: productData.description,
@@ -319,8 +325,6 @@ class DatabaseService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: session.storeId,
-          licenseKey: session.licenseKey,
-          pinCode: session.pinCode,
           product: {
             id: product.id,
             name: product.name,
@@ -358,8 +362,6 @@ class DatabaseService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: session.storeId,
-          licenseKey: session.licenseKey,
-          pinCode: session.pinCode,
           product: {
             id: productId,
             toggleAvailability: true,
@@ -386,8 +388,6 @@ class DatabaseService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: session.storeId,
-          licenseKey: session.licenseKey,
-          pinCode: session.pinCode,
           productId,
         }),
       });
@@ -414,8 +414,6 @@ class DatabaseService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId,
-          licenseKey: session.licenseKey,
-          pinCode: session.pinCode,
           name,
         }),
       });
@@ -437,8 +435,6 @@ class DatabaseService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: storeId || session.storeId,
-          licenseKey: session.licenseKey,
-          pinCode: session.pinCode,
           categoryId,
         }),
       });
@@ -457,28 +453,30 @@ class DatabaseService {
 
   async loginAdmin(key: string, remember = false): Promise<{ success: boolean; stores?: Store[]; error?: string }> {
     try {
-      const res = await fetch(`${API_BASE}/admin/licenses`, {
-        headers: { 'X-Admin-Key': key },
+      const res = await fetch(`${API_BASE}/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: key, rememberDevice: remember }),
       });
       const data = await parseJson(res);
       if (!res.ok || !data.success) {
         return { success: false, error: data.error ?? 'Clé administrateur invalide' };
       }
-      this.setAdminKey(key, remember);
-      return { success: true, stores: data.stores ?? [] };
+      this.setAdminAuthenticated(remember);
+      const storesResult = await this.getAdminStores();
+      return {
+        success: true,
+        stores: storesResult.stores,
+        error: storesResult.error,
+      };
     } catch {
       return { success: false, error: 'Erreur réseau' };
     }
   }
 
   async getAdminStores(): Promise<{ success: boolean; stores: Store[]; error?: string }> {
-    const key = this.getAdminKey();
-    if (!key) return { success: false, stores: [], error: 'Clé administrateur absente' };
-
     try {
-      const res = await fetch(`${API_BASE}/admin/licenses`, {
-        headers: { 'X-Admin-Key': key },
-      });
+      const res = await fetch(`${API_BASE}/admin/licenses`);
       const data = await parseJson(res);
       if (res.status === 401) {
         this.clearAdminKey();
@@ -509,14 +507,10 @@ class DatabaseService {
     maxProducts?: number;
     durationMonths?: number;
   }): Promise<CreatedStoreAccess> {
-    const key = this.getAdminKey();
-    if (!key) throw new Error('Clé administrateur absente. Reconnectez-vous.');
-
     const res = await fetch(`${API_BASE}/admin/licenses`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Admin-Key': key,
       },
       body: JSON.stringify({
         storeName: params.name,
@@ -548,15 +542,11 @@ class DatabaseService {
   }
 
   async toggleStoreStatus(storeId: string): Promise<{ success: boolean; store?: Store; error?: string }> {
-    const key = this.getAdminKey();
-    if (!key) return { success: false, error: 'Clé administrateur absente' };
-
     try {
       const res = await fetch(`${API_BASE}/admin/licenses`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-Admin-Key': key,
         },
         body: JSON.stringify({ storeId, action: 'toggleStatus' }),
       });
@@ -570,15 +560,11 @@ class DatabaseService {
   }
 
   async resetStorePin(storeId: string): Promise<{ success: boolean; store?: Store; pinCode?: string; error?: string }> {
-    const key = this.getAdminKey();
-    if (!key) return { success: false, error: 'Clé administrateur absente' };
-
     try {
       const res = await fetch(`${API_BASE}/admin/licenses`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-Admin-Key': key,
         },
         body: JSON.stringify({ storeId, action: 'resetPin' }),
       });
@@ -596,15 +582,11 @@ class DatabaseService {
   }
 
   async renewStoreLicense(storeId: string, additionalMonths = 12): Promise<{ success: boolean; store?: Store; error?: string }> {
-    const key = this.getAdminKey();
-    if (!key) return { success: false, error: 'Clé administrateur absente' };
-
     try {
       const res = await fetch(`${API_BASE}/admin/licenses`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-Admin-Key': key,
         },
         body: JSON.stringify({ storeId, action: 'renew', additionalMonths }),
       });

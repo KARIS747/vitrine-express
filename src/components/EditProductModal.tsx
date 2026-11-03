@@ -103,6 +103,11 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
       return;
     }
 
+    if (!imageUrl) {
+      toast.error("Veuillez conserver ou ajouter une photo de l'article");
+      return;
+    }
+
     if (!isAvailable && !restockDate) {
       toast.error("Veuillez indiquer la date d'arrivage");
       return;

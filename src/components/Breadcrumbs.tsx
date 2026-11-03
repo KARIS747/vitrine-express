@@ -18,32 +18,8 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
   onHomeClick,
   className = '',
 }) => {
-  // Generate schema.org structured data for SEO
-  const schemaData = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Accueil',
-        item: typeof window !== 'undefined' ? window.location.origin : 'https://vitrine-express.pages.dev',
-      },
-      ...items.map((item, index) => ({
-        '@type': 'ListItem',
-        position: index + 2,
-        name: item.label,
-      })),
-    ],
-  };
-
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
-      />
-      <nav
+    <nav
         aria-label="Fil d'Ariane"
         className={`flex items-center gap-1.5 text-xs text-ink-500 dark:text-ink-400 overflow-x-auto whitespace-nowrap py-2 no-scrollbar ${className}`}
       >
@@ -76,7 +52,6 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
             )}
           </React.Fragment>
         ))}
-      </nav>
-    </>
+    </nav>
   );
 };

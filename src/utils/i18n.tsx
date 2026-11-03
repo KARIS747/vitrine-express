@@ -49,13 +49,6 @@ export interface Translations {
     onlineStoresHeading: string;
     emptyStoresTitle: string;
     emptyStoresText: string;
-    proBannerTag: string;
-    proBannerTitle: string;
-    proBannerDesc: string;
-    proBannerCta: string;
-    proMerchantBoxTitle: string;
-    proMerchantBoxText: string;
-    proMerchantBoxBtn: string;
     footerSubtitle: string;
     footerDesignedBy: string;
   };
@@ -170,13 +163,6 @@ export const translations: Record<Language, Translations> = {
       onlineStoresHeading: 'Boutiques en ligne',
       emptyStoresTitle: 'Les premières vitrines arrivent bientôt',
       emptyStoresText: 'Vous êtes commerçant ? Connectez-vous à votre espace pour mettre votre catalogue en ligne.',
-      proBannerTag: 'Vous voulez votre propre vitrine ?',
-      proBannerTitle: 'Lancez votre boutique en ligne à 5 000 FCFA / an',
-      proBannerDesc: 'Idéal pour exposer vos articles, partager votre catalogue sur WhatsApp et poser votre affiche QR code en boutique. Je configure votre espace personnel en quelques minutes.',
-      proBannerCta: 'Créer ma boutique sur WhatsApp',
-      proMerchantBoxTitle: 'Commerçant déjà inscrit ?',
-      proMerchantBoxText: 'Connectez-vous pour ajouter un article, changer un prix ou annoncer un nouvel arrivage.',
-      proMerchantBoxBtn: 'Ouvrir mon espace gérant',
       footerSubtitle: 'Vitrines WhatsApp pour les commerçants du Cameroun.',
       footerDesignedBy: 'VitrineExpress • Développé par Karis (+237 681 610 040 • karisdev369@gmail.com)',
     },
@@ -287,13 +273,6 @@ export const translations: Record<Language, Translations> = {
       onlineStoresHeading: 'Online stores',
       emptyStoresTitle: 'First storefronts coming soon',
       emptyStoresText: 'Are you a merchant? Sign in to your dashboard to publish your catalog.',
-      proBannerTag: 'Want your own storefront?',
-      proBannerTitle: 'Launch your online shop for 5,000 FCFA / year',
-      proBannerDesc: 'Perfect to showcase items, share your catalog on WhatsApp and display your print-ready QR code in your shop. I set up your custom store in minutes.',
-      proBannerCta: 'Create my store on WhatsApp',
-      proMerchantBoxTitle: 'Already registered?',
-      proMerchantBoxText: 'Log in to add an item, adjust prices or announce restock arrivals.',
-      proMerchantBoxBtn: 'Open my merchant space',
       footerSubtitle: 'WhatsApp storefronts for local businesses in Cameroon.',
       footerDesignedBy: 'VitrineExpress • Built by Karis (+237 681 610 040 • karisdev369@gmail.com)',
     },

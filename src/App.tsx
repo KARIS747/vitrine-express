@@ -1,15 +1,22 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Store, Category, Product, ViewMode } from './types';
 import { dbService, MerchantSession } from './services/db';
 import { Navbar } from './components/Navbar';
 import { LandingView } from './views/LandingView';
 import { StorefrontView } from './views/StorefrontView';
 import { StorefrontSkeleton } from './components/StorefrontSkeleton';
-import { MerchantDashboardView } from './views/MerchantDashboardView';
-import { MerchantLoginView } from './views/MerchantLoginView';
-import { LicenseManagerView } from './views/LicenseManagerView';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { NotFoundView } from './views/NotFoundView';
+
+const MerchantDashboardView = lazy(() =>
+  import('./views/MerchantDashboardView').then((module) => ({ default: module.MerchantDashboardView })),
+);
+const MerchantLoginView = lazy(() =>
+  import('./views/MerchantLoginView').then((module) => ({ default: module.MerchantLoginView })),
+);
+const LicenseManagerView = lazy(() =>
+  import('./views/LicenseManagerView').then((module) => ({ default: module.LicenseManagerView })),
+);
 import { updatePageSeo } from './utils/seo';
 import { Toaster, toast } from 'sonner';
 import { AlertCircle, Home, RefreshCw, Store as StoreIcon, WifiOff } from 'lucide-react';
@@ -42,6 +49,13 @@ function slugFromLocation(): string | null {
 function storePath(slug: string): string {
   return `/boutique/${encodeURIComponent(slug)}`;
 }
+
+const ViewFallback: React.FC<{ label?: string }> = ({ label }) => (
+  <div className="min-h-[60vh] flex flex-col items-center justify-center p-4">
+    <div className="w-8 h-8 border-[3px] border-ink-200 border-t-brand-600 rounded-full animate-spin mb-3" />
+    <span className="text-xs text-ink-500">{label ?? 'Chargement...'}</span>
+  </div>
+);
 
 export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewMode>(() => viewFromPath());
@@ -138,6 +152,15 @@ export const App: React.FC = () => {
 
     setIsMerchantLoading(true);
     try {
+      const validation = await dbService.validateMerchantSession();
+      if (!validation.valid) {
+        dbService.clearMerchantSession();
+        setMerchantSession(null);
+        setMerchantData(null);
+        toast.error("Votre session a expiré. Reconnectez-vous.");
+        return null;
+      }
+
       const data = await dbService.getStoreBySlug(session.storeSlug);
       if (!data) {
         dbService.clearMerchantSession();
@@ -147,6 +170,7 @@ export const App: React.FC = () => {
         return null;
       }
       setMerchantData(data);
+      if (validation.offline && data.isOffline) setIsOfflineData(true);
       return data;
     } finally {
       setIsMerchantLoading(false);
@@ -298,7 +322,7 @@ export const App: React.FC = () => {
   };
 
   const handleMerchantLogout = () => {
-    dbService.clearMerchantSession();
+    dbService.logoutMerchant();
     setMerchantSession(null);
     setMerchantData(null);
     setSearchQuery('');
@@ -418,39 +442,36 @@ export const App: React.FC = () => {
         />
       )}
 
-      {currentView === 'merchant' && (
-        merchantSession ? (
-          merchantData ? (
-            <MerchantDashboardView
-              store={merchantData.store}
-              categories={merchantData.categories}
-              products={merchantData.products}
-              onRefresh={refreshMerchant}
-              onPreviewStorefront={() => navigate('storefront')}
-              onLogout={handleMerchantLogout}
-            />
+      <Suspense fallback={<ViewFallback />}>
+        {currentView === 'merchant' && (
+          merchantSession ? (
+            merchantData ? (
+              <MerchantDashboardView
+                store={merchantData.store}
+                categories={merchantData.categories}
+                products={merchantData.products}
+                onRefresh={refreshMerchant}
+                onPreviewStorefront={() => navigate('storefront')}
+                onLogout={handleMerchantLogout}
+              />
+            ) : (
+              <ViewFallback label={isMerchantLoading ? 'Chargement de votre espace...' : 'Session introuvable'} />
+            )
           ) : (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center p-4">
-              <div className="w-8 h-8 border-[3px] border-ink-200 border-t-brand-600 rounded-full animate-spin mb-3" />
-              <span className="text-xs text-ink-500">
-                {isMerchantLoading ? 'Chargement de votre espace...' : 'Session introuvable'}
-              </span>
-            </div>
+            <MerchantLoginView
+              onLoginSuccess={handleMerchantLogin}
+              onBack={() => navigate('landing')}
+            />
           )
-        ) : (
-          <MerchantLoginView
-            onLoginSuccess={handleMerchantLogin}
-            onBack={() => navigate('landing')}
-          />
-        )
-      )}
+        )}
 
-      {currentView === 'admin' && (
-        <LicenseManagerView
-          onSelectStore={handleSelectStore}
-          onBackToHome={() => navigate('landing')}
-        />
-      )}
+        {currentView === 'admin' && (
+          <LicenseManagerView
+            onSelectStore={handleSelectStore}
+            onBackToHome={() => navigate('landing')}
+          />
+        )}
+      </Suspense>
 
       {currentView === 'storefront' && <PWAInstallButton />}
     </div>

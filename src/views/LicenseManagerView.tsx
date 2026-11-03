@@ -96,7 +96,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   onSelectStore,
   onBackToHome,
 }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(dbService.getAdminKey()));
+  const [isAuthenticated, setIsAuthenticated] = useState(() => dbService.isAdminAuthenticated());
   const [adminKeyInput, setAdminKeyInput] = useState('');
   const [showAdminKey, setShowAdminKey] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(true);
@@ -123,7 +123,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       setStores(result.stores);
     } else {
       setError(result.error ?? 'Erreur de chargement');
-      if (!dbService.getAdminKey()) {
+      if (!dbService.isAdminAuthenticated()) {
         setIsAuthenticated(false);
       }
     }
@@ -194,7 +194,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur de création';
       toast.error(message);
-      if (!dbService.getAdminKey()) setIsAuthenticated(false);
+      if (!dbService.isAdminAuthenticated()) setIsAuthenticated(false);
     } finally {
       setIsCreating(false);
     }
@@ -214,7 +214,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
         toast.success(isActive ? `${store.name} suspendue` : `${store.name} réactivée`);
       } else {
         toast.error(result.error ?? 'Erreur de mise à jour');
-        if (!dbService.getAdminKey()) setIsAuthenticated(false);
+        if (!dbService.isAdminAuthenticated()) setIsAuthenticated(false);
       }
     } finally {
       setActionId(null);
@@ -234,7 +234,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
         toast.success(`Licence de ${store.name} prolongée de 12 mois`);
       } else {
         toast.error(result.error ?? 'Erreur de renouvellement');
-        if (!dbService.getAdminKey()) setIsAuthenticated(false);
+        if (!dbService.isAdminAuthenticated()) setIsAuthenticated(false);
       }
     } finally {
       setActionId(null);
@@ -260,7 +260,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
         toast.success(`Nouveau PIN généré pour ${store.name}`);
       } else {
         toast.error(result.error ?? 'Erreur de réinitialisation du PIN');
-        if (!dbService.getAdminKey()) setIsAuthenticated(false);
+        if (!dbService.isAdminAuthenticated()) setIsAuthenticated(false);
       }
     } finally {
       setActionId(null);
@@ -336,7 +336,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Impossible de générer la fiche PDF';
       toast.error(message);
-      if (!dbService.getAdminKey()) setIsAuthenticated(false);
+      if (!dbService.isAdminAuthenticated()) setIsAuthenticated(false);
     } finally {
       setIsGeneratingPdf(false);
     }

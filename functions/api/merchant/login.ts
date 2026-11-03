@@ -3,39 +3,25 @@
 
 import {
   authenticateMerchantLogin,
+  createSession,
   json,
+  MERCHANT_SESSION_COOKIE,
+  sessionCookie,
+  SESSION_TTLS,
   type SecurityEnv,
 } from "../../_lib/security";
+import { publicStore } from "../../_lib/store";
 
 type Env = SecurityEnv;
-
-const publicStore = (store: any) => ({
-  id: store.id,
-  slug: store.slug,
-  name: store.name,
-  tagline: store.tagline,
-  description: store.description,
-  whatsapp_number: store.whatsapp_number,
-  phone_call: store.phone_call,
-  city: store.city,
-  quarter: store.quarter,
-  address_notes: store.address_notes,
-  logo_url: store.logo_url,
-  banner_url: store.banner_url,
-  theme_primary: store.theme_primary,
-  theme_accent: store.theme_accent,
-  max_products: store.max_products,
-  expires_at: store.expires_at,
-  is_active: store.is_active,
-  created_at: store.created_at,
-});
 
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
   const db = context.env.DB;
   if (!db) return json({ error: "Base de données non configurée" }, 500);
 
   try {
-    const { licenseKey, pinCode } = await context.request.json() as any;
+    const body = await context.request.json() as any;
+    const { licenseKey, pinCode } = body;
+    const remember = Boolean(body.rememberDevice);
     const identifier = String(licenseKey ?? "").trim();
     const pin = String(pinCode ?? "").trim();
 
@@ -58,12 +44,22 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       .bind(store.id)
       .first();
 
+    const ttl = remember ? SESSION_TTLS.merchantRemember : SESSION_TTLS.merchant;
+    const { token } = await createSession(db, "merchant", store.id, context.request, ttl);
+
     return json({
       success: true,
       store: {
         ...publicStore(store),
         current_products_count: countResult ? Number(countResult.total) : 0,
       },
+    }, 200, {
+      "Set-Cookie": sessionCookie(
+        context.request,
+        MERCHANT_SESSION_COOKIE,
+        token,
+        remember ? ttl : 0,
+      ),
     });
   } catch (err: any) {
     return json({ error: err.message || "Erreur serveur" }, 500);

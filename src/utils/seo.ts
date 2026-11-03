@@ -13,7 +13,7 @@ const DEFAULT_METADATA: Required<SeoMetadata> = {
   title: 'VitrineExpress — Vitrines Produits & Commandes WhatsApp',
   description: 'Scannez, découvrez et commandez : vitrines WhatsApp rapides et élégantes pour les commerçants du Cameroun.',
   canonicalPath: '/',
-  image: 'https://vitrine-express.pages.dev/og-image.png',
+  image: '',
   type: 'website',
 };
 
@@ -47,7 +47,7 @@ export function updatePageSeo(meta: SeoMetadata = {}) {
 
   const title = meta.title ? `${meta.title} | VitrineExpress` : DEFAULT_METADATA.title;
   const description = meta.description || DEFAULT_METADATA.description;
-  const image = meta.image || DEFAULT_METADATA.image;
+  const image = meta.image || `${origin}/og-image.png`;
   const type = meta.type || DEFAULT_METADATA.type;
 
   // Title
