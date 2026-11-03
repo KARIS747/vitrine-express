@@ -241,6 +241,35 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     }
   };
 
+  const handleUpdateQuota = async (store: Store) => {
+    const currentQuota = store.max_products || 20;
+    const input = window.prompt(
+      `Nouveau quota d'articles pour ${store.name} (actuellement : ${currentQuota} articles) :`,
+      String(currentQuota),
+    );
+    if (!input) return;
+
+    const newQuota = parseInt(input.trim(), 10);
+    if (isNaN(newQuota) || newQuota < 1 || newQuota > 500) {
+      toast.error('Veuillez entrer un nombre valide entre 1 et 500 articles');
+      return;
+    }
+
+    setActionId(store.id);
+    try {
+      const result = await dbService.updateStoreQuota(store.id, newQuota);
+      if (result.success && result.store) {
+        setStores((current) => current.map((item) => item.id === store.id ? { ...item, ...result.store } : item));
+        toast.success(`Quota de ${store.name} ajusté à ${newQuota} articles`);
+      } else {
+        toast.error(result.error ?? 'Erreur de mise à jour du quota');
+        if (!dbService.isAdminAuthenticated()) setIsAuthenticated(false);
+      }
+    } finally {
+      setActionId(null);
+    }
+  };
+
   const handleResetPin = async (store: Store) => {
     if (!window.confirm(`Générer un nouveau PIN pour ${store.name} ? L'ancien PIN ne fonctionnera plus.`)) {
       return;
@@ -723,6 +752,16 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${isBusy ? 'animate-spin' : ''}`} />
                         +1 an
+                      </button>
+
+                      <button
+                        onClick={() => void handleUpdateQuota(store)}
+                        disabled={isBusy}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                        title="Modifier le quota d'articles (upgrades)"
+                      >
+                        <Package className="w-3.5 h-3.5" />
+                        Quota
                       </button>
 
                       <button

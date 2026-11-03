@@ -598,6 +598,27 @@ class DatabaseService {
       return { success: false, error: 'Erreur réseau' };
     }
   }
+
+  async updateStoreQuota(storeId: string, maxProducts: number): Promise<{ success: boolean; store?: Store; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/licenses`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ storeId, action: 'updateQuota', maxProducts }),
+      });
+      const data = await parseJson(res);
+      if (res.status === 401) {
+        this.clearAdminKey();
+      }
+      return res.ok
+        ? { success: true, store: data.store }
+        : { success: false, error: data.error ?? 'Erreur de mise à jour du quota' };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
 }
 
 export const dbService = new DatabaseService();

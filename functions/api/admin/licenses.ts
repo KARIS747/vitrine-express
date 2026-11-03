@@ -260,6 +260,14 @@ export const onRequestPatch = async (context: { request: Request; env: Env }) =>
         .prepare(`UPDATE stores SET pin_code = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
         .bind(pinHash, storeId)
         .run();
+    } else if (action === "updateQuota") {
+      const newQuota = Math.max(1, Math.min(500, Number(body.maxProducts) || 20));
+      await db.batch([
+        db.prepare(`UPDATE stores SET max_products = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+          .bind(newQuota, storeId),
+        db.prepare(`UPDATE licenses SET max_products = ? WHERE store_id = ?`)
+          .bind(newQuota, storeId),
+      ]);
     } else {
       return json({ error: "Action administrateur inconnue" }, 400);
     }
