@@ -20,7 +20,10 @@ export function extractStoreSlug(value: string): string | null {
 
   let url: URL;
   try {
-    url = new URL(candidate, window.location.origin);
+    const defaultOrigin = typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://vitrine-express.pages.dev';
+    url = new URL(candidate, defaultOrigin);
   } catch {
     return null;
   }
