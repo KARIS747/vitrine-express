@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Store } from '../types';
 import { CartItem, formatFCFA, buildWhatsAppCartOrderLink } from '../utils/formatters';
 import { useLanguage } from '../utils/i18n';
-import { ShoppingCart, X, Plus, Minus, Trash2 } from 'lucide-react';
+import { ShoppingCart, X, Plus, Minus, Trash2, User, MapPin } from 'lucide-react';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -25,6 +25,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onClearCart,
 }) => {
   const { language, t } = useLanguage();
+  const [customerName, setCustomerName] = useState('');
+  const [deliveryQuarter, setDeliveryQuarter] = useState('');
 
   const totalCount = items.reduce((acc, it) => acc + it.quantity, 0);
   const totalPrice = items.reduce((acc, it) => acc + it.product.price * it.quantity, 0);
@@ -34,7 +36,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     store.name,
     items,
     store.slug,
-    language
+    language,
+    { name: customerName, deliveryQuarter }
   );
 
   return (
@@ -169,6 +172,35 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <span className="font-display font-bold text-xl text-ink-950 dark:text-white">
                       {formatFCFA(totalPrice, language)}
                     </span>
+                  </div>
+
+                  {/* Coordonnées de livraison rapides */}
+                  <div className="p-3 rounded-xl bg-warm-100/70 dark:bg-ink-850 border border-ink-150 dark:border-ink-800 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400 block">
+                      {language === 'fr' ? 'Vos coordonnées de livraison (facultatif)' : 'Delivery info (optional)'}
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative">
+                        <User className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder={language === 'fr' ? 'Votre prénom' : 'Your name'}
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          className="w-full pl-8 pr-2 py-1.5 rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-xs text-ink-900 dark:text-white placeholder:text-ink-400 focus:outline-none focus:border-brand-600"
+                        />
+                      </div>
+                      <div className="relative">
+                        <MapPin className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder={language === 'fr' ? 'Quartier (ex: Akwa)' : 'Quarter (e.g. Akwa)'}
+                          value={deliveryQuarter}
+                          onChange={(e) => setDeliveryQuarter(e.target.value)}
+                          className="w-full pl-8 pr-2 py-1.5 rounded-lg border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-xs text-ink-900 dark:text-white placeholder:text-ink-400 focus:outline-none focus:border-brand-600"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <a

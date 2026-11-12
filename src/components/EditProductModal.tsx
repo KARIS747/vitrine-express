@@ -4,6 +4,7 @@ import { Product, Category, Store } from '../types';
 import { dbService } from '../services/db';
 import { compressProductImage, CompressionResult } from '../utils/imageCompression';
 import { X, Upload, Check, Sparkles, Plus, Image as ImageIcon } from 'lucide-react';
+import { ImageUploadDropzone } from './ImageUploadDropzone';
 import { toast } from 'sonner';
 
 interface EditProductModalProps {
@@ -172,22 +173,14 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-            {/* Photo preview & change */}
-            <div>
-              <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1.5">
-                Photo de l'article
-              </label>
-
-              <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-ink-200 group bg-warm-100">
-                <img src={imageUrl} alt="Aperçu" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-ink-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <label className="px-3.5 py-2 rounded-xl bg-white text-ink-900 text-xs font-semibold cursor-pointer shadow-xs">
-                    Remplacer la photo
-                    <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" />
-                  </label>
-                </div>
-              </div>
-            </div>
+            {/* Photo preview & change with animated compression */}
+            <ImageUploadDropzone
+              imageUrl={imageUrl}
+              isCompressing={isCompressing}
+              compressionInfo={compressionInfo}
+              onFileSelect={handleImageFileChange}
+              label="Photo de l'article"
+            />
 
             {/* Name */}
             <div>

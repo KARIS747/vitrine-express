@@ -4,6 +4,7 @@ import { Product, Category, Store } from '../types';
 import { dbService } from '../services/db';
 import { compressProductImage, CompressionResult } from '../utils/imageCompression';
 import { X, Upload, Check, AlertCircle, Sparkles, Plus, Image as ImageIcon, MessageCircle, Mail } from 'lucide-react';
+import { ImageUploadDropzone } from './ImageUploadDropzone';
 import { toast } from 'sonner';
 
 interface AddProductModalProps {
@@ -210,46 +211,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               </div>
             )}
 
-            {/* Product Image Upload with live client compression */}
-            <div>
-              <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1.5">
-                Photo du produit *
-              </label>
-
-              {imageUrl ? (
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-ink-200 group bg-warm-100">
-                  <img src={imageUrl} alt="Aperçu" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-ink-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <label className="px-3 py-1.5 rounded-lg bg-white text-ink-900 text-xs font-medium cursor-pointer shadow-xs">
-                      Changer la photo
-                      <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" />
-                    </label>
-                  </div>
-                  {compressionInfo && (
-                    <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/70 text-[11px] text-white">
-                      Compressé : {compressionInfo.compressedSizeKB} Ko (Gain : {Math.round((1 - compressionInfo.compressedSizeKB / compressionInfo.originalSizeKB) * 100)}%)
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <label className="border-2 border-dashed border-ink-200 hover:border-brand-600 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer bg-warm-50/60 hover:bg-brand-50/20 transition-all">
-                  <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center mb-2">
-                    {isCompressing ? (
-                      <Sparkles className="w-6 h-6 animate-spin text-brand-600" />
-                    ) : (
-                      <Upload className="w-6 h-6" />
-                    )}
-                  </div>
-                  <span className="text-sm font-semibold text-ink-900">
-                    {isCompressing ? 'Optimisation en cours...' : 'Prendre ou choisir une photo'}
-                  </span>
-                  <span className="text-xs text-ink-500 mt-1">
-                    Compression automatique intégrée (ultra légère pour vos clients)
-                  </span>
-                  <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" disabled={isCompressing} />
-                </label>
-              )}
-            </div>
+            {/* Product Image Upload with animated live client compression */}
+            <ImageUploadDropzone
+              imageUrl={imageUrl}
+              isCompressing={isCompressing}
+              compressionInfo={compressionInfo}
+              onFileSelect={handleImageFileChange}
+              label="Photo du produit *"
+            />
 
             {/* Name */}
             <div>

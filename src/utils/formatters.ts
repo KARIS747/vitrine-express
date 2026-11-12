@@ -58,10 +58,14 @@ export function buildWhatsAppCartOrderLink(
   storeName: string,
   items: CartItem[],
   storeSlug?: string,
-  lang: Language = 'fr'
+  lang: Language = 'fr',
+  customerInfo?: { name?: string; deliveryQuarter?: string }
 ): string {
   const cleanPhone = whatsappNumber.replace(/[^0-9]/g, '');
   const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+  const cleanName = customerInfo?.name?.trim();
+  const cleanQuarter = customerInfo?.deliveryQuarter?.trim();
 
   if (lang === 'en') {
     const itemsList = items
@@ -73,8 +77,12 @@ export function buildWhatsAppCartOrderLink(
       )
       .join('\n');
 
+    const intro = cleanName
+      ? `Hello *${storeName}*! I am *${cleanName}*${cleanQuarter ? ` (Delivery: *${cleanQuarter}*)` : ''}.`
+      : `Hello *${storeName}*!`;
+
     const message = [
-      `Hello *${storeName}*!`,
+      intro,
       ``,
       `I have prepared an order from your online storefront:`,
       itemsList,
@@ -96,8 +104,12 @@ export function buildWhatsAppCartOrderLink(
     )
     .join('\n');
 
+  const intro = cleanName
+    ? `Bonjour *${storeName}* ! Je suis *${cleanName}*${cleanQuarter ? ` (Livraison : *${cleanQuarter}*)` : ''}.`
+    : `Bonjour *${storeName}* !`;
+
   const message = [
-    `Bonjour *${storeName}* !`,
+    intro,
     ``,
     `J'ai préparé une commande depuis votre vitrine en ligne :`,
     itemsList,

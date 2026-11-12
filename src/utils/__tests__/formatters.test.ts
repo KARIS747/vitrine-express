@@ -128,6 +128,21 @@ describe('WhatsApp Links', () => {
     expect(decoded).toContain('Ceinture Luxe* x1');
   });
 
+  it('includes customer name and delivery quarter in cart WhatsApp message when provided', () => {
+    const items: CartItem[] = [{ product: sampleProduct, quantity: 1 }];
+    const link = buildWhatsAppCartOrderLink(
+      '677112233',
+      'Mode Express',
+      items,
+      'mode-express',
+      'fr',
+      { name: 'Amina', deliveryQuarter: 'Akwa' }
+    );
+    const decoded = decodeURIComponent(link.split('?text=')[1]);
+    expect(decoded).toContain('Je suis *Amina*');
+    expect(decoded).toContain('Livraison : *Akwa*');
+  });
+
   it('builds general contact link in French and English', () => {
     const linkFr = buildWhatsAppContactLink('+237 690-00-11-22', 'Karis Store', 'fr');
     expect(linkFr.startsWith('https://wa.me/237690001122?text=')).toBe(true);

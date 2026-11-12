@@ -57,20 +57,20 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto print:static print:p-0">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-ink-950/70 backdrop-blur-xs"
+          className="fixed inset-0 bg-ink-950/70 backdrop-blur-xs print:hidden"
         />
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-md bg-white rounded-3xl shadow-elevated border border-ink-100 overflow-hidden z-10 my-auto"
+          className="relative w-full max-w-md bg-white rounded-3xl shadow-elevated border border-ink-100 overflow-hidden z-10 my-auto print:static print:max-w-full print:border-none print:shadow-none"
         >
           {/* Header Action Bar */}
           <div className="flex items-center justify-between p-4 border-b border-ink-100 bg-warm-50 print:hidden">
