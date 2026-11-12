@@ -15,6 +15,8 @@ export const publicStore = (store: any) => ({
   banner_url: store.banner_url,
   theme_primary: store.theme_primary,
   theme_accent: store.theme_accent,
+  contact_preference: store.contact_preference ?? 'whatsapp',
+  contact_email: store.contact_email ?? null,
   max_products: store.max_products,
   expires_at: store.expires_at,
   is_active: store.is_active,

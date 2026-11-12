@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS stores (
     description TEXT,                      -- Bio / présentation
     whatsapp_number TEXT NOT NULL,         -- Numéro format international (Ex: 237699000000)
     phone_call TEXT,                       -- Numéro d'appel direct
+    contact_preference TEXT DEFAULT 'whatsapp', -- Canal favori : 'whatsapp' ou 'email'
+    contact_email TEXT,                    -- Adresse email si préférence email
     city TEXT DEFAULT 'Douala',            -- Ville (Douala, Yaoundé, Bafoussam...)
     quarter TEXT,                          -- Quartier (Akwa, Bonamoussadi, Mokolo...)
     address_notes TEXT,                    -- Précision (ex: Face Boulangerie Saker)

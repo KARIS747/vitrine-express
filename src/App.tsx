@@ -17,6 +17,9 @@ const MerchantLoginView = lazy(() =>
 const LicenseManagerView = lazy(() =>
   import('./views/LicenseManagerView').then((module) => ({ default: module.LicenseManagerView })),
 );
+const RegisterView = lazy(() =>
+  import('./views/RegisterView').then((module) => ({ default: module.RegisterView })),
+);
 import { updatePageSeo } from './utils/seo';
 import { Toaster, toast } from 'sonner';
 import { AlertCircle, Home, RefreshCw, Store as StoreIcon, WifiOff } from 'lucide-react';
@@ -35,6 +38,7 @@ function viewFromPath(): ViewMode {
     return 'landing';
   }
   if (path === '/admin') return 'admin';
+  if (path === '/creer-boutique' || path === '/register') return 'register';
   if (path === '/merchant' || path.startsWith('/merchant/')) return 'merchant';
   if (path.startsWith('/boutique/')) return 'storefront';
   return 'not-found';
@@ -251,6 +255,17 @@ export const App: React.FC = () => {
       return;
     }
 
+    if (view === 'register') {
+      setCurrentView('register');
+      window.history.pushState({}, '', '/creer-boutique');
+      updatePageSeo({
+        title: 'Créer ma vitrine gratuite — VitrineExpress',
+        description: 'Créez votre vitrine WhatsApp en ligne en 1 minute. Plan Découverte gratuit 8 produits, zéro frais cachés.',
+        canonicalPath: '/creer-boutique',
+      });
+      return;
+    }
+
     if (view === 'admin') {
       setCurrentView('admin');
       window.history.pushState({}, '', '/admin');
@@ -420,6 +435,7 @@ export const App: React.FC = () => {
           onOpenStoreBySlug={openStoreBySlug}
           onMerchantLogin={() => navigate('merchant')}
           onAdmin={() => navigate('admin')}
+          onCreateStore={() => navigate('register')}
         />
       )}
 
@@ -443,6 +459,15 @@ export const App: React.FC = () => {
       )}
 
       <Suspense fallback={<ViewFallback />}>
+        {currentView === 'register' && (
+          <RegisterView
+            onSuccess={handleMerchantLogin}
+            onNavigateToLogin={() => navigate('merchant')}
+            onNavigateHome={() => navigate('landing')}
+            onOpenStore={openStoreBySlug}
+          />
+        )}
+
         {currentView === 'merchant' && (
           merchantSession ? (
             merchantData ? (

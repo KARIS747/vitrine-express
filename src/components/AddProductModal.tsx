@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Category, Store } from '../types';
 import { dbService } from '../services/db';
 import { compressProductImage, CompressionResult } from '../utils/imageCompression';
-import { X, Upload, Check, AlertCircle, Sparkles, Plus, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Check, AlertCircle, Sparkles, Plus, Image as ImageIcon, MessageCircle, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AddProductModalProps {
@@ -181,11 +181,31 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
             {/* Warning if limit reached */}
             {isLimitReached && (
-              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <div>
-                  <span className="font-bold block">Limite de {maxProducts} produits atteinte</span>
-                  Votre forfait actuel autorise {maxProducts} articles actifs. Contactez Karis pour débloquer un forfait supérieur ou supprimez un ancien article.
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-col gap-2.5">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-bold block">Limite de {maxProducts} produits atteinte</span>
+                    Votre formule actuelle autorise jusqu'à {maxProducts} articles. Passez au Plan Pro pour ajouter plus de produits :
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-1 border-t border-amber-200/60">
+                  <a
+                    href={`https://wa.me/237681610040?text=${encodeURIComponent(`Bonjour Karis, je suis ${store.name} (${store.slug}). J'ai atteint la limite de ${maxProducts} produits et je souhaite passer au Plan Pro.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-colors"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </a>
+                  <a
+                    href={`mailto:karisdev369@gmail.com?subject=${encodeURIComponent(`Demande Plan Pro - ${store.name}`)}&body=${encodeURIComponent(`Bonjour Karis,\n\nJe suis le gérant de la boutique ${store.name} (Slug: ${store.slug}, Tel: ${store.whatsapp_number}).\n\nJ'ai atteint mon quota actuel de ${maxProducts} produits et je souhaite souscrire au Plan Pro.\n\nMerci !`)}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-200 bg-white hover:bg-warm-100 text-ink-800 font-semibold text-xs shadow-xs transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-ink-500" />
+                    <span>Email</span>
+                  </a>
                 </div>
               </div>
             )}

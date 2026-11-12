@@ -32,6 +32,10 @@ export function createMockD1(initial: MockD1Options = {}) {
           const slug = params[0];
           return stores.find((s) => s.slug === slug) || null;
         }
+        if (norm.includes('from stores where whatsapp_number')) {
+          const phone = params[0];
+          return stores.find((s) => s.whatsapp_number === phone) || null;
+        }
         if (norm.includes('from stores where id')) {
           const id = params[0];
           return stores.find((s) => s.id === id) || null;
@@ -87,6 +91,26 @@ export function createMockD1(initial: MockD1Options = {}) {
         if (norm.includes('insert into sessions')) {
           const [tokenHash, scope, storeId, expiresAt, userAgent] = params;
           sessions.push({ token_hash: tokenHash, scope, store_id: storeId, expires_at: expiresAt, user_agent: userAgent });
+          return { success: true };
+        }
+        if (norm.includes('insert into stores')) {
+          const storeObj: any = {
+            id: params[0],
+            slug: params[1],
+            name: params[2],
+            whatsapp_number: params[3],
+            phone_call: params[4],
+            city: norm.includes('contact_preference') ? params[7] : params[5],
+            quarter: norm.includes('contact_preference') ? params[8] : params[6],
+            license_key: norm.includes('contact_preference') ? params[9] : params[7],
+            pin_code: norm.includes('contact_preference') ? params[10] : params[8],
+            max_products: norm.includes('contact_preference') ? params[11] : params[9],
+            expires_at: norm.includes('contact_preference') ? params[12] : params[10],
+            is_active: 1,
+            contact_preference: norm.includes('contact_preference') ? params[5] : 'whatsapp',
+            contact_email: norm.includes('contact_preference') ? params[6] : null,
+          };
+          stores.push(storeObj);
           return { success: true };
         }
         if (norm.includes('update stores set max_products')) {

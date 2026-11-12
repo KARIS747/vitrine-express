@@ -44,6 +44,7 @@ interface LandingViewProps {
   onOpenStoreBySlug: (slug: string) => Promise<boolean>;
   onMerchantLogin: () => void;
   onAdmin: () => void;
+  onCreateStore: () => void;
 }
 
 const StoreCard: React.FC<{
@@ -140,6 +141,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
   onOpenStoreBySlug,
   onMerchantLogin,
   onAdmin,
+  onCreateStore,
 }) => {
   const { t, language } = useLanguage();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -247,15 +249,14 @@ export const LandingView: React.FC<LandingViewProps> = ({
             </div>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <a
-                href={`https://wa.me/237681610040?text=${waCreateMsg}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
+              <button
+                type="button"
+                onClick={onCreateStore}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 cursor-pointer"
               >
-                <MessageCircle className="h-4 w-4" />
-                {t.landing.ctaCreateStore}
-              </a>
+                <Sparkles className="h-4 w-4" />
+                <span>{language === 'fr' ? 'Créer ma vitrine gratuite' : 'Create free store'}</span>
+              </button>
               <a
                 href="#boutiques"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-semibold text-ink-800 shadow-xs transition-colors hover:bg-warm-100"

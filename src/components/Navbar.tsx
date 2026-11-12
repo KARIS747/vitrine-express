@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewMode } from '../types';
-import { Store as StoreIcon, Search, ShieldCheck, UserRound, Home } from 'lucide-react';
+import { Store as StoreIcon, Search, ShieldCheck, UserRound, Home, Sparkles } from 'lucide-react';
 import { useLanguage } from '../utils/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
@@ -77,6 +77,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Home className="w-3.5 h-3.5" />
             <span>{t.nav.home}</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('register')}
+            className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              currentView === 'register'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Créer ma boutique</span>
           </button>
 
           <button

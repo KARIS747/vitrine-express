@@ -248,6 +248,54 @@ class DatabaseService {
   }
 
   // ----------------------------------------------------------
+  //  INSCRIPTION AUTONOME (Plan Gratuit 8 produits)
+  // ----------------------------------------------------------
+
+  async registerStore(payload: {
+    storeName: string;
+    whatsappNumber: string;
+    city?: string;
+    quarter?: string;
+    contactPreference: 'whatsapp' | 'email';
+    contactEmail?: string;
+    pinCode: string;
+  }): Promise<{
+    success: boolean;
+    store?: Store;
+    licenseKey?: string;
+    pinCode?: string;
+    message?: string;
+    error?: string;
+  }> {
+    try {
+      const res = await fetch(`${API_BASE}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await parseJson(res);
+      if (!res.ok || !data.success || !data.store) {
+        return {
+          success: false,
+          error: data.error ?? 'Erreur lors de la création de la boutique',
+        };
+      }
+
+      this.setMerchantSession(data.store.id, data.store.slug);
+
+      return {
+        success: true,
+        store: data.store,
+        licenseKey: data.licenseKey,
+        pinCode: data.pinCode,
+        message: data.message,
+      };
+    } catch {
+      return { success: false, error: 'Erreur réseau lors de la création de la boutique' };
+    }
+  }
+
+  // ----------------------------------------------------------
   //  BOUTIQUE (boutiquier authentifié)
   // ----------------------------------------------------------
 

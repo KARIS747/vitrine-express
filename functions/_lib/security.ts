@@ -199,7 +199,7 @@ export function rateLimitResponse(retryAfter: number): Response {
   );
 }
 
-async function limiterKeys(prefix: string, values: string[]): Promise<string[]> {
+export async function limiterKeys(prefix: string, values: string[]): Promise<string[]> {
   return Promise.all(
     values.map(async (value) => `${prefix}:${await sha256Hex(value.trim().toLowerCase())}`),
   );

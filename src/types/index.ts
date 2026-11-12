@@ -6,6 +6,8 @@ export interface Store {
   description?: string;
   whatsapp_number: string;
   phone_call?: string;
+  contact_preference?: 'whatsapp' | 'email';
+  contact_email?: string;
   city: string;
   quarter?: string;
   address_notes?: string;
@@ -60,4 +62,4 @@ export interface License {
   created_at?: string;
 }
 
-export type ViewMode = 'landing' | 'storefront' | 'merchant' | 'admin' | 'print-poster' | 'not-found';
+export type ViewMode = 'landing' | 'register' | 'storefront' | 'merchant' | 'admin' | 'print-poster' | 'not-found';

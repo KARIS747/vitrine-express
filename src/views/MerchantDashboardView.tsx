@@ -21,6 +21,9 @@ import {
   Clock,
   ExternalLink,
   LogOut,
+  Mail,
+  MessageCircle,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -297,6 +300,38 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
                   : `You have ${maxProducts - currentCount} slots left to add new products.`
               )}
             </p>
+
+            {isLimitReached && (
+              <div className="mt-3 p-3 rounded-xl bg-amber-50/80 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                <div>
+                  <span className="text-xs font-bold text-amber-950 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    Passer au Plan Pro
+                  </span>
+                  <span className="text-[11px] text-amber-800">
+                    Débloquez 30 à 50 produits. Contactez Karis :
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={`https://wa.me/237681610040?text=${encodeURIComponent(`Bonjour Karis, je suis ${store.name} (${store.slug}). J'ai atteint mon quota de ${maxProducts} produits et je souhaite passer au Plan Pro.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </a>
+                  <a
+                    href={`mailto:karisdev369@gmail.com?subject=${encodeURIComponent(`Demande Plan Pro - ${store.name}`)}&body=${encodeURIComponent(`Bonjour Karis,\n\nJe suis le gérant de la boutique ${store.name} (Slug: ${store.slug}, Tel: ${store.whatsapp_number}).\n\nJ'ai atteint mon quota actuel de ${maxProducts} produits et je souhaite souscrire au Plan Pro.\n\nMerci !`)}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-200 bg-white hover:bg-warm-100 text-ink-800 text-xs font-semibold shadow-xs transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-ink-500" />
+                    <span>Email</span>
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* In Stock Count */}
