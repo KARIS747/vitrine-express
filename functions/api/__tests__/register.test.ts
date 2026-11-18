@@ -68,7 +68,7 @@ describe('Register API: POST /api/register', () => {
     expect(body.error).toContain('code PIN');
   });
 
-  it('rejects with 409 when WhatsApp number is already registered for an active store', async () => {
+  it('rejects with 409 when WhatsApp number is already registered for an active store and does not leak store details', async () => {
     const existingStore = {
       id: 'store_existing',
       name: 'Ancienne Boutique',
@@ -83,6 +83,26 @@ describe('Register API: POST /api/register', () => {
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.error).toContain('déjà associée');
+    // Vérification de non-divulgation des données sensibles (anti-énumération)
+    expect(body.error).not.toContain('Ancienne Boutique');
+    expect(body.existingSlug).toBeUndefined();
+  });
+
+  it('rejects with 403 when cross-origin request attempts CSRF', async () => {
+    const db = createMockD1();
+    const req = new Request('http://localhost/api/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'https://evil-hacker.com',
+      },
+      body: JSON.stringify(basePayload),
+    });
+    const res = await onRequestPost({ request: req, env: { DB: db, PIN_PEPPER } });
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain('non autorisée');
   });
 
   it('creates store on Plan Découverte (8 products max) with WhatsApp contact and sets session cookie', async () => {

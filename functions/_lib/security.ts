@@ -34,6 +34,44 @@ export function clientIp(request: Request): string {
   return "unknown";
 }
 
+/**
+ * Protection CSRF : vérifie que l'origine de la requête correspond à l'origine du serveur
+ * sur toutes les requêtes de mutation d'état (POST, PUT, DELETE, PATCH).
+ */
+export function verifySameOrigin(request: Request): Response | null {
+  const method = request.method.toUpperCase();
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
+    return null;
+  }
+
+  const origin = request.headers.get("Origin");
+  if (!origin) {
+    // Les requêtes sans Origin (ex: SSR, curl, tests sans navigateur) sont acceptées
+    return null;
+  }
+
+  try {
+    const originUrl = new URL(origin);
+    const requestUrl = new URL(request.url);
+
+    // Même origine stricte (protocole + domaine + port)
+    if (originUrl.origin === requestUrl.origin) {
+      return null;
+    }
+
+    // Tolérance environnement de développement local (ex: Vite 5173 -> Wrangler 8788)
+    const isLocalOrigin = originUrl.hostname === "localhost" || originUrl.hostname === "127.0.0.1";
+    const isLocalRequest = requestUrl.hostname === "localhost" || requestUrl.hostname === "127.0.0.1";
+    if (isLocalOrigin && isLocalRequest) {
+      return null;
+    }
+
+    return json({ error: "Origine de la requête non autorisée (CSRF bloqué)" }, 403);
+  } catch {
+    return json({ error: "En-tête Origin invalide" }, 400);
+  }
+}
+
 export async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
   return Array.from(new Uint8Array(digest))
@@ -172,6 +210,17 @@ export async function recordFailure(
       `)
       .bind(limiterKey, failures, windowStart, blockedUntil)
       .run();
+
+    // Nettoyage opportuniste des tentatives obsolètes (> 48h)
+    try {
+      const staleThreshold = new Date(now - 48 * 3600 * 1000).toISOString();
+      await db
+        .prepare(`DELETE FROM auth_attempts WHERE updated_at < ?`)
+        .bind(staleThreshold)
+        .run();
+    } catch {
+      // La purge ne doit pas bloquer l'enregistrement
+    }
 
     return { blocked, retryAfter: blocked ? config.blockSeconds : 0 };
   } catch {
@@ -420,6 +469,9 @@ export async function guardAdmin(
   request: Request,
   env: SecurityEnv,
 ): Promise<Response | null> {
+  const originDenial = verifySameOrigin(request);
+  if (originDenial) return originDenial;
+
   const db = env.DB;
   if (!db) return json({ error: "Base D1 non disponible" }, 500);
 
@@ -445,6 +497,10 @@ export async function authenticateMerchant(
   db: any,
   input: MerchantAuthInput,
 ): Promise<{ store?: any; response?: Response }> {
+  // Protection CSRF sur les requêtes mutantes
+  const originDenial = verifySameOrigin(input.request);
+  if (originDenial) return { response: originDenial };
+
   // 1. Session HttpOnly (nouveau fonctionnement, aucun secret dans le navigateur).
   const session = await getMerchantSessionStore(db, input.request);
   if (session.store) {

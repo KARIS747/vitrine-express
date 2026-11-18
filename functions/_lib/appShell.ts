@@ -125,10 +125,11 @@ export async function serveAppShell(
   if (meta.noindex) {
     headExtras.push('<meta name="robots" content="noindex, nofollow">');
   }
-  if (meta.jsonLd && nonce) {
+  if (meta.jsonLd) {
     const json = JSON.stringify(meta.jsonLd).replace(/</g, "\\u003c");
+    const nonceAttr = nonce ? ` nonce="${escapeHtmlAttribute(nonce)}"` : "";
     headExtras.push(
-      `<script type="application/ld+json" nonce="${escapeHtmlAttribute(nonce)}">${json}</script>`,
+      `<script type="application/ld+json"${nonceAttr}>${json}</script>`,
     );
   }
   if (headExtras.length > 0) {

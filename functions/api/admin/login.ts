@@ -8,12 +8,16 @@ import {
   sessionCookie,
   SESSION_TTLS,
   verifyAdminAccess,
+  verifySameOrigin,
   type SecurityEnv,
 } from "../../_lib/security";
 
 type Env = SecurityEnv;
 
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
+  const originDenial = verifySameOrigin(context.request);
+  if (originDenial) return originDenial;
+
   const db = context.env.DB;
   if (!db) return json({ error: "Base D1 non disponible" }, 500);
 

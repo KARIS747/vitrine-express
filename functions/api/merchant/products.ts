@@ -16,7 +16,7 @@ function cleanImageUrl(value: unknown): string {
 
 function imageIsValid(value: string): boolean {
   if (!value) return false;
-  if (value.length > 1_300_000) return false;
+  if (value.length > 800_000) return false;
   return value.startsWith("data:image/") || value.startsWith("https://") || value.startsWith("http://");
 }
 

@@ -5,6 +5,7 @@ import {
   hashPin,
   verifyPin,
   rateLimitResponse,
+  verifySameOrigin,
 } from '../security';
 
 describe('Security: sha256Hex', () => {
@@ -82,5 +83,50 @@ describe('Security: rateLimitResponse', () => {
 
     const data = await res.json();
     expect(data.error).toContain('Trop de tentatives');
+  });
+});
+
+describe('Security: verifySameOrigin (Anti-CSRF)', () => {
+  it('allows safe methods (GET, HEAD, OPTIONS) regardless of Origin', () => {
+    const req = new Request('https://vitrine-express.pages.dev/api/stores', {
+      method: 'GET',
+      headers: { Origin: 'https://malicious-site.com' },
+    });
+    expect(verifySameOrigin(req)).toBeNull();
+  });
+
+  it('allows mutating requests when Origin matches request origin', () => {
+    const req = new Request('https://vitrine-express.pages.dev/api/merchant/products', {
+      method: 'POST',
+      headers: { Origin: 'https://vitrine-express.pages.dev' },
+    });
+    expect(verifySameOrigin(req)).toBeNull();
+  });
+
+  it('allows requests without Origin header (e.g. server-to-server or tests)', () => {
+    const req = new Request('https://vitrine-express.pages.dev/api/merchant/products', {
+      method: 'POST',
+    });
+    expect(verifySameOrigin(req)).toBeNull();
+  });
+
+  it('allows localhost to localhost for local development', () => {
+    const req = new Request('http://localhost:8788/api/merchant/products', {
+      method: 'POST',
+      headers: { Origin: 'http://localhost:5173' },
+    });
+    expect(verifySameOrigin(req)).toBeNull();
+  });
+
+  it('blocks cross-origin mutating requests with 403', async () => {
+    const req = new Request('https://vitrine-express.pages.dev/api/merchant/products', {
+      method: 'POST',
+      headers: { Origin: 'https://attacker.evil' },
+    });
+    const denial = verifySameOrigin(req);
+    expect(denial).not.toBeNull();
+    expect(denial?.status).toBe(403);
+    const body = await denial?.json();
+    expect(body.error).toContain('CSRF bloqué');
   });
 });

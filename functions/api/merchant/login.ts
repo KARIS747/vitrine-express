@@ -8,6 +8,7 @@ import {
   MERCHANT_SESSION_COOKIE,
   sessionCookie,
   SESSION_TTLS,
+  verifySameOrigin,
   type SecurityEnv,
 } from "../../_lib/security";
 import { publicStore } from "../../_lib/store";
@@ -15,6 +16,9 @@ import { publicStore } from "../../_lib/store";
 type Env = SecurityEnv;
 
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
+  const originDenial = verifySameOrigin(context.request);
+  if (originDenial) return originDenial;
+
   const db = context.env.DB;
   if (!db) return json({ error: "Base de données non configurée" }, 500);
 

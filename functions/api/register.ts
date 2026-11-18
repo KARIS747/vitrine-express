@@ -15,6 +15,7 @@ import {
   recordFailure,
   sessionCookie,
   SESSION_TTLS,
+  verifySameOrigin,
   type SecurityEnv,
 } from "../_lib/security";
 import { publicStore } from "../_lib/store";
@@ -34,6 +35,9 @@ const cleanSlug = (value: string) =>
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
+  const originDenial = verifySameOrigin(context.request);
+  if (originDenial) return originDenial;
+
   const db = context.env.DB;
   if (!db) {
     return json({ error: "Base de données non configurée" }, 500);
@@ -92,14 +96,14 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
     // 3. Vérifier si ce numéro WhatsApp possède déjà une boutique active
     const existingWithPhone = await db
-      .prepare(`SELECT id, name, slug FROM stores WHERE whatsapp_number = ? AND is_active = 1`)
+      .prepare(`SELECT id FROM stores WHERE whatsapp_number = ? AND is_active = 1`)
       .bind(cleanWhatsApp)
       .first();
 
     if (existingWithPhone) {
+      await recordFailure(db, ipKey, RATE_LIMITS.merchantLogin);
       return json({
-        error: `Une boutique active ("${existingWithPhone.name}") est déjà associée à ce numéro WhatsApp. Connectez-vous à votre espace commerçant avec votre PIN.`,
-        existingSlug: existingWithPhone.slug,
+        error: "Une boutique active est déjà associée à ce numéro WhatsApp. Connectez-vous à votre espace commerçant avec votre PIN.",
       }, 409);
     }
 
