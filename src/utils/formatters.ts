@@ -87,7 +87,7 @@ export function buildWhatsAppCartOrderLink(
       `I have prepared an order from your online storefront:`,
       itemsList,
       ``,
-      `💰 *Total: ${formatFCFA(total, 'en')}*`,
+      `*Total: ${formatFCFA(total, 'en')}*`,
       ``,
       `Could you please confirm availability and tell me how we can proceed with payment and delivery? Thank you!`
     ].join('\n');
@@ -114,7 +114,7 @@ export function buildWhatsAppCartOrderLink(
     `J'ai préparé une commande depuis votre vitrine en ligne :`,
     itemsList,
     ``,
-    `💰 *Total : ${formatFCFA(total, 'fr')}*`,
+    `*Total : ${formatFCFA(total, 'fr')}*`,
     ``,
     `Pouvez-vous me confirmer la disponibilité et les modalités de livraison ? Merci !`
   ].join('\n');
@@ -140,15 +140,15 @@ export function buildWhatsAppOrderLink(
 
   if (lang === 'en') {
     const statusNote = isAvailable 
-      ? "✅ Listed as IN STOCK" 
-      : `⏳ Restock scheduled for: ${formatDate(product.restock_date, 'en') || 'soon'}`;
+      ? "Status: IN STOCK" 
+      : `Restock scheduled for: ${formatDate(product.restock_date, 'en') || 'soon'}`;
 
     const message = [
       `Hello *${storeName}*!`,
       ``,
       `I saw this item on your online storefront and I would like to order:`,
-      `👉 *${product.name}*`,
-      `💰 *Price: ${formatFCFA(product.price, 'en')}*`,
+      `• *${product.name}*`,
+      `Price: ${formatFCFA(product.price, 'en')}`,
       statusNote,
       ``,
       `Could you please confirm availability and delivery options? Thank you!`
@@ -158,16 +158,16 @@ export function buildWhatsAppOrderLink(
   }
 
   const statusNote = isAvailable 
-    ? "✅ Noté comme DISPONIBLE en stock" 
-    : `⏳ Arrivage prévu le : ${formatDate(product.restock_date, 'fr') || 'bientôt'}`;
+    ? "Statut : DISPONIBLE en stock" 
+    : `Arrivage prévu le : ${formatDate(product.restock_date, 'fr') || 'bientôt'}`;
 
   // Message soigné et professionnel, orienté conversion directe
   const message = [
     `Bonjour *${storeName}* !`,
     ``,
     `J'ai vu cet article sur votre vitrine en ligne et je souhaite passer commande :`,
-    `👉 *${product.name}*`,
-    `💰 *Prix : ${formatFCFA(product.price, 'fr')}*`,
+    `• *${product.name}*`,
+    `Prix : ${formatFCFA(product.price, 'fr')}`,
     statusNote,
     ``,
     `Pouvez-vous me confirmer la disponibilité et les modalités de livraison ? Merci !`

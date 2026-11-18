@@ -10,6 +10,7 @@ import { CategoryManagerModal } from '../components/CategoryManagerModal';
 import { QRPosterModal } from '../components/QRPosterModal';
 import { StoreSettingsModal } from '../components/StoreSettingsModal';
 import {
+  ArrowUpRight,
   Plus,
   QrCode,
   Share2,
@@ -23,7 +24,6 @@ import {
   LogOut,
   Mail,
   MessageCircle,
-  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -305,7 +305,7 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
               <div className="mt-3 p-3 rounded-xl bg-amber-50/80 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
                 <div>
                   <span className="text-xs font-bold text-amber-950 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <ArrowUpRight className="w-3.5 h-3.5 text-amber-600" />
                     Passer au Plan Pro
                   </span>
                   <span className="text-[11px] text-amber-800">

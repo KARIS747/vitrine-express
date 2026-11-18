@@ -13,21 +13,16 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  Flame,
   HeartHandshake,
   Loader2,
   Lock,
   Mail,
   MapPin,
   MessageCircle,
-  PartyPopper,
   Phone,
-  Rocket,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Store as StoreIcon,
-  Zap,
 } from 'lucide-react';
 
 interface RegisterViewProps {
@@ -87,46 +82,44 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
   const isPinMatch = isPinValid && pinCode === pinConfirm;
 
   // Calcul dynamique de la progression (0 à 100%)
-  const { progress, cheerMessage } = useMemo(() => {
+  const { progress, stepStatus } = useMemo(() => {
     let score = 0;
     if (isNameValid) score += 25;
     if (isPhoneValid) score += 25;
     if (isEmailValid) score += 20;
     if (isPinMatch) score += 30;
 
-    let cheer = {
-      text: '👋 Bienvenue ! Donnez un nom à votre boutique pour commencer.',
-      icon: Sparkles,
-      color: 'text-brand-700 dark:text-brand-400',
+    let status = {
+      label: 'Étape 1 sur 3 · Nom commercial',
+      detail: 'Indiquez le nom officiel de votre enseigne',
+      icon: StoreIcon,
+      color: 'text-ink-800 dark:text-ink-200',
     };
 
     if (score === 25) {
-      cheer = {
-        text: '✨ Magnifique nom ! Vos clients vont vite vous repérer.',
-        icon: Flame,
-        color: 'text-amber-600 dark:text-amber-400',
-      };
-    } else if (score === 50) {
-      cheer = {
-        text: '📲 Super ! Vos futures commandes WhatsApp arriveront ici.',
+      status = {
+        label: 'Étape 2 sur 3 · Numéro WhatsApp',
+        detail: 'Numéro de réception des commandes clients',
         icon: MessageCircle,
-        color: 'text-emerald-600 dark:text-emerald-400',
+        color: 'text-emerald-700 dark:text-emerald-400',
       };
-    } else if (score === 70) {
-      cheer = {
-        text: '💪 Tu y es presque, courage ! Plus qu’un petit code secret.',
-        icon: Zap,
-        color: 'text-indigo-600 dark:text-indigo-400',
+    } else if (score >= 50 && score < 100) {
+      status = {
+        label: 'Étape 3 sur 3 · Code d\'accès',
+        detail: 'Définissez votre code PIN secret (4 à 12 caractères)',
+        icon: Lock,
+        color: 'text-brand-700 dark:text-brand-400',
       };
     } else if (score === 100) {
-      cheer = {
-        text: '🎉 Tout est parfait ! Votre vitrine gratuite est prête à ouvrir.',
-        icon: PartyPopper,
-        color: 'text-emerald-600 dark:text-emerald-400',
+      status = {
+        label: 'Prêt pour l\'ouverture',
+        detail: 'Tous les champs requis sont validés',
+        icon: CheckCircle2,
+        color: 'text-emerald-700 dark:text-emerald-400',
       };
     }
 
-    return { progress: score, cheerMessage: cheer };
+    return { progress: score, stepStatus: status };
   }, [isNameValid, isPhoneValid, isEmailValid, isPinMatch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,7 +167,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
         return;
       }
 
-      toast.success('Félicitations ! Votre vitrine est prête ! 🎉');
+      toast.success('Boutique créée avec succès. Bienvenue sur VitrineExpress !');
       setCreatedStore(res.store);
       setCreatedPin(pinCode.trim());
     } finally {
@@ -187,13 +180,13 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     const url = `${window.location.origin}/boutique/${encodeURIComponent(createdStore.slug)}`;
     navigator.clipboard.writeText(url).then(() => {
       setIsCopied(true);
-      toast.success('Lien copié dans le presse-papier !');
+      toast.success('Lien copié dans le presse-papier');
       setTimeout(() => setIsCopied(false), 2500);
     });
   };
 
   // ==========================================================
-  // ÉCRAN DE CÉLÉBRATION (Boutique créée avec succès)
+  // ÉCRAN DE CONFIRMATION (Boutique créée avec succès)
   // ==========================================================
   if (createdStore) {
     const fullStoreUrl = `${window.location.origin}/boutique/${encodeURIComponent(createdStore.slug)}`;
@@ -203,34 +196,25 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     return (
       <div className="min-h-[calc(100vh-3.5rem)] bg-warm-50 dark:bg-ink-950 py-10 px-4 sm:px-6 flex items-center justify-center transition-colors">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.4, type: 'spring' }}
-          className="w-full max-w-lg bg-white dark:bg-ink-900 rounded-3xl border border-ink-100 dark:border-ink-800 shadow-elevated p-6 sm:p-8 text-center relative overflow-hidden"
+          transition={{ duration: 0.3 }}
+          className="w-full max-w-lg bg-white dark:bg-ink-900 rounded-2xl border border-ink-150 dark:border-ink-800 shadow-elevated p-6 sm:p-8 text-center relative overflow-hidden"
         >
-          {/* Confetti background accent */}
-          <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-brand-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          {/* Celebratory Icon */}
-          <motion.div
-            initial={{ scale: 0, rotate: -30 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
-            className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-500/25"
-          >
-            <PartyPopper className="w-10 h-10 animate-bounce" />
-          </motion.div>
+          {/* Status Icon */}
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-7 h-7" />
+          </div>
 
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold mb-2">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Plan Découverte Activé (8 produits)
+            Plan Découverte actif · 8 produits
           </span>
 
-          <h1 className="font-display font-bold text-2xl sm:text-3xl text-ink-950 dark:text-white mt-1">
-            Félicitations ! 🎉
+          <h1 className="font-display font-bold text-2xl text-ink-950 dark:text-white mt-1">
+            Vitrine créée avec succès
           </h1>
           <p className="text-sm text-ink-600 dark:text-ink-400 mt-2 max-w-md mx-auto">
-            Votre vitrine <strong className="text-ink-900 dark:text-white">{createdStore.name}</strong> est officiellement née et accessible au public !
+            Votre vitrine <strong className="text-ink-900 dark:text-white">{createdStore.name}</strong> est opérationnelle et prête à recevoir vos commandes.
           </p>
 
           {/* URL Box */}
@@ -277,23 +261,20 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
 
           {/* Actions */}
           <div className="mt-7 flex flex-col gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               onClick={() => onSuccess(createdStore)}
-              className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl bg-brand-700 hover:bg-brand-800 text-white font-semibold text-sm shadow-md transition-colors cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm shadow-xs transition-colors cursor-pointer"
             >
-              <Rocket className="w-4 h-4" />
-              <span>Ajouter mes 8 premiers articles</span>
+              <span>Accéder à mon espace commerçant</span>
               <ArrowRight className="w-4 h-4" />
-            </motion.button>
+            </button>
 
             <button
               onClick={() => onOpenStore(createdStore.slug)}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-2xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 hover:bg-warm-100 dark:hover:bg-ink-800 text-ink-800 dark:text-ink-200 font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 hover:bg-warm-100 dark:hover:bg-ink-800 text-ink-800 dark:text-ink-200 font-medium text-xs shadow-xs transition-colors cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Voir ma vitrine comme un client</span>
+              <span>Voir la vitrine publique</span>
             </button>
           </div>
         </motion.div>
@@ -309,14 +290,10 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
       <div className="max-w-2xl mx-auto">
         {/* En-tête */}
         <div className="text-center mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold mb-3 shadow-xs"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            <span>Plan Découverte · 100% Gratuit à vie</span>
-          </motion.div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold mb-3">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Formule Découverte · Gratuite sans engagement</span>
+          </div>
 
           <h1 className="font-display font-bold text-3xl sm:text-4xl text-ink-950 dark:text-white tracking-tight">
             Lancez votre vitrine en 1 minute
@@ -327,63 +304,68 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
         </div>
 
         {/* ==================================================== */}
-        {/* BARRE D'ENCOURAGEMENT & DE PROGRESSION DYNAMIQUE     */}
+        {/* INDICATEUR D'ÉTAPE ET PROGRESSION                   */}
         {/* ==================================================== */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mb-6 p-4 rounded-2xl bg-white dark:bg-ink-900 border border-ink-150 dark:border-ink-800 shadow-sm"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-5 p-4 rounded-xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 shadow-xs"
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <cheerMessage.icon className={`w-4 h-4 ${cheerMessage.color}`} />
-              <span className={`text-xs font-bold ${cheerMessage.color}`}>
-                {cheerMessage.text}
-              </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <stepStatus.icon className={`w-4 h-4 shrink-0 ${stepStatus.color}`} />
+              <div className="min-w-0">
+                <span className="text-xs font-semibold text-ink-900 dark:text-white block truncate">
+                  {stepStatus.label}
+                </span>
+                <span className="text-[11px] text-ink-500 dark:text-ink-400 block truncate">
+                  {stepStatus.detail}
+                </span>
+              </div>
             </div>
-            <span className="text-xs font-mono font-bold text-ink-500 dark:text-ink-400">
+            <span className="text-xs font-mono font-semibold text-ink-500 dark:text-ink-400 shrink-0 ml-3">
               {progress}%
             </span>
           </div>
 
           {/* Track */}
-          <div className="w-full h-2 rounded-full bg-warm-100 dark:bg-ink-800 overflow-hidden">
+          <div className="w-full h-1.5 rounded-full bg-warm-100 dark:bg-ink-800 overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-brand-600"
+              className="h-full rounded-full bg-emerald-600 dark:bg-emerald-500"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
             />
           </div>
         </motion.div>
 
         {/* ==================================================== */}
-        {/* APERÇU EN TEMPS RÉEL DE LA VITRINE                   */}
+        {/* APERÇU EN DIRECT DE LA VITRINE                       */}
         {/* ==================================================== */}
-        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 dark:from-emerald-950/20 via-brand-50/50 dark:via-brand-950/20 to-warm-50 dark:to-ink-900 border border-emerald-200/80 dark:border-emerald-800/60 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-emerald-600" />
-              Aperçu en direct de votre vitrine
+        <div className="mb-6 p-4 rounded-xl bg-warm-50 dark:bg-ink-900/60 border border-ink-200 dark:border-ink-800">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-500 dark:text-ink-400 flex items-center gap-1.5">
+              <StoreIcon className="w-3.5 h-3.5 text-emerald-600" />
+              Aperçu en direct
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold">
-              8 produits inclus
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold">
+              Formule Découverte · 8 articles
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-brand-700 text-white font-display font-bold text-lg flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-10 h-10 rounded-lg bg-emerald-700 text-white font-display font-semibold text-base flex items-center justify-center shrink-0">
               {storeName.trim() ? storeName.trim().charAt(0).toUpperCase() : 'V'}
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="font-display font-bold text-sm text-ink-950 dark:text-white truncate">
-                {storeName.trim() || 'Le Nom de Votre Boutique'}
+              <h2 className="font-display font-semibold text-sm text-ink-950 dark:text-white truncate">
+                {storeName.trim() || 'Nom de votre commerce'}
               </h2>
               <p className="text-[11px] text-ink-500 dark:text-ink-400 truncate">
-                {city} {quarter.trim() ? `• ${quarter.trim()}` : ''} · Panier WhatsApp actif
+                {city} {quarter.trim() ? `• ${quarter.trim()}` : ''} · Commandes directes WhatsApp
               </p>
-              <p className="text-[10px] font-mono text-brand-700 dark:text-brand-300 truncate">
-                /boutique/{previewSlug || 'votre-boutique'}
+              <p className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 truncate mt-0.5">
+                /boutique/{previewSlug || 'identifiant'}
               </p>
             </div>
           </div>
@@ -639,17 +621,11 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
             </div>
 
             {/* Bouton de soumission */}
-            <div className="pt-4">
-              <motion.button
+            <div className="pt-3">
+              <button
                 type="submit"
                 disabled={isSubmitting}
-                whileHover={!isSubmitting ? { scale: 1.01 } : {}}
-                whileTap={!isSubmitting ? { scale: 0.98 } : {}}
-                className={`w-full inline-flex items-center justify-center gap-2 py-4 px-6 rounded-2xl text-white font-semibold text-sm shadow-md transition-all cursor-pointer ${
-                  progress === 100
-                    ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-emerald-500/25 ring-2 ring-emerald-500/30'
-                    : 'bg-emerald-600 hover:bg-emerald-700'
-                } disabled:opacity-50 disabled:cursor-wait`}
+                className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-medium text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
               >
                 {isSubmitting ? (
                   <>
@@ -658,22 +634,21 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 animate-pulse" />
-                    <span>Ouvrir ma boutique gratuite (8 produits)</span>
+                    <span>Créer ma vitrine (8 articles gratuits)</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
-              </motion.button>
+              </button>
             </div>
 
             {/* Réassurance */}
             <div className="flex items-center justify-center gap-4 text-[11px] text-ink-500 dark:text-ink-400 pt-1">
               <span className="inline-flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> 100% Gratuit
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Sans carte bancaire
               </span>
               <span>•</span>
               <span className="inline-flex items-center gap-1">
-                <Zap className="w-3.5 h-3.5 text-amber-500" /> Prêt en 30 secondes
+                <StoreIcon className="w-3.5 h-3.5 text-emerald-600" /> 8 articles inclus
               </span>
               <span>•</span>
               <span className="inline-flex items-center gap-1">

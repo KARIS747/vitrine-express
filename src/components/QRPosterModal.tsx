@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Store } from '../types';
 import { generateQRCodeDataUrl } from '../utils/qrCode';
 import { useLanguage } from '../utils/i18n';
-import { X, Printer, Sparkles, MapPin, Share2, Loader2 } from 'lucide-react';
+import { X, Printer, Camera, MapPin, Share2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface QRPosterModalProps {
@@ -134,8 +134,8 @@ export const QRPosterModal: React.FC<QRPosterModalProps> = ({
                 )}
               </div>
 
-              <div className="mt-3.5 flex items-center gap-1.5 text-xs font-bold text-ink-900">
-                <Sparkles className="w-4 h-4 text-brand-600" />
+              <div className="mt-3.5 flex items-center gap-1.5 text-xs font-semibold text-ink-900">
+                <Camera className="w-4 h-4 text-brand-600" />
                 <span>
                   {language === 'fr' ? "Scannez avec l'appareil photo" : 'Scan with your camera'}
                 </span>

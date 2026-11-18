@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewMode } from '../types';
-import { Store as StoreIcon, Search, ShieldCheck, UserRound, Home, Sparkles } from 'lucide-react';
+import { Store as StoreIcon, Search, ShieldCheck, UserRound, Home, Plus } from 'lucide-react';
 import { useLanguage } from '../utils/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
@@ -87,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" />
             <span>Créer ma boutique</span>
           </button>
 

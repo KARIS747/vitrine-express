@@ -86,7 +86,7 @@ export const StoreSettingsModal: React.FC<StoreSettingsModalProps> = ({
       } else {
         setBannerUrl(result.dataUrl);
       }
-      toast.success(`Image optimisée : ${result.originalSizeKB} Ko ➔ ${result.compressedSizeKB} Ko`);
+      toast.success(`Image optimisée : ${result.originalSizeKB} Ko → ${result.compressedSizeKB} Ko`);
     } catch {
       toast.error("Impossible de traiter cette image");
     } finally {

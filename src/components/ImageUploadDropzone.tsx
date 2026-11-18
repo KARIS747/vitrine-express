@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Check, RefreshCw, Sparkles, Upload, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Camera, Check, Loader2, RefreshCw, Upload } from 'lucide-react';
 import { CompressionResult } from '../utils/imageCompression';
 
 interface ImageUploadDropzoneProps {
@@ -32,14 +32,10 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
           {label}
         </label>
         {compressionInfo && (
-          <motion.span
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800"
-          >
-            <Sparkles className="w-3 h-3 text-emerald-500" />
-            <span>-{gainPercent}% de data</span>
-          </motion.span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+            <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+            <span>-{gainPercent}% data économisée</span>
+          </span>
         )}
       </div>
 
@@ -52,37 +48,32 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
         disabled={isCompressing}
       />
 
-      {/* CAS 1 : EN COURS DE COMPRESSION (Animation Scanner Laser) */}
+      {/* CAS 1 : EN COURS DE COMPRESSION */}
       {isCompressing && (
-        <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-emerald-400 bg-emerald-950/90 flex flex-col items-center justify-center p-6 text-center text-white shadow-md">
-          {/* Faisceau laser animé de haut en bas */}
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-emerald-500/30 bg-ink-950 flex flex-col items-center justify-center p-6 text-center text-white">
+          {/* Ligne de scan sobre */}
           <motion.div
-            className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399]"
-            animate={{ top: ['5%', '92%', '5%'] }}
-            transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+            className="absolute left-0 right-0 h-0.5 bg-emerald-400/80"
+            animate={{ top: ['5%', '95%', '5%'] }}
+            transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
           />
 
-          <motion.div
-            animate={{ scale: [1, 1.12, 1] }}
-            transition={{ repeat: Infinity, duration: 1.2 }}
-            className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center mb-3 text-emerald-300 shadow-inner"
-          >
-            <Zap className="w-7 h-7 text-emerald-400" />
-          </motion.div>
+          <div className="w-11 h-11 rounded-xl bg-ink-900 border border-ink-800 flex items-center justify-center mb-3 text-emerald-400">
+            <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+          </div>
 
-          <p className="text-sm font-bold text-emerald-100 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-emerald-300 animate-spin" />
-            <span>Optimisation intelligente de la photo...</span>
+          <p className="text-xs font-semibold text-white">
+            Optimisation de la photo pour mobile 3G...
           </p>
-          <p className="text-xs text-emerald-300/80 mt-1 max-w-xs">
-            Compression haute résolution sans perte de qualité visuelle pour économiser la data de vos clients.
+          <p className="text-[11px] text-ink-400 mt-1 max-w-xs">
+            Compression locale sans perte de netteté pour réduire la consommation de données.
           </p>
 
-          <div className="mt-3 w-48 h-1.5 rounded-full bg-emerald-900 overflow-hidden">
+          <div className="mt-3 w-40 h-1 rounded-full bg-ink-800 overflow-hidden">
             <motion.div
-              className="h-full bg-emerald-400"
-              animate={{ width: ['10%', '85%', '98%'] }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+              className="h-full bg-emerald-500"
+              animate={{ width: ['10%', '80%', '98%'] }}
+              transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
             />
           </div>
         </div>
@@ -90,46 +81,44 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
 
       {/* CAS 2 : IMAGE PRÊTE AVEC APERÇU NET */}
       {!isCompressing && imageUrl && (
-        <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-ink-200 dark:border-ink-700 group bg-warm-100 dark:bg-ink-950 shadow-xs">
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-ink-200 dark:border-ink-700 group bg-warm-100 dark:bg-ink-950 shadow-xs">
           <img
             src={imageUrl}
             alt="Aperçu"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
+            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-101"
           />
 
           {/* Overlay interactif pour changer la photo */}
-          <div className="absolute inset-0 bg-ink-950/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-xs">
+          <div className="absolute inset-0 bg-ink-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-ink-900 text-xs font-semibold cursor-pointer shadow-md hover:bg-warm-100 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-ink-900 text-xs font-medium cursor-pointer shadow-sm hover:bg-warm-100 transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Changer de photo</span>
+              <span>Changer la photo</span>
             </button>
           </div>
 
           {/* Badge statistiques de compression en bas à gauche */}
           {compressionInfo && (
-            <motion.div
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-sm text-[11px] text-white flex items-center gap-1.5 shadow-sm"
-            >
+            <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-ink-950/80 backdrop-blur-xs text-[11px] text-white flex items-center gap-1.5 border border-white/10">
               <Check className="w-3.5 h-3.5 text-emerald-400" />
               <span>
-                {compressionInfo.originalSizeKB > 0 && `${compressionInfo.originalSizeKB} Ko ➔ `}
-                <strong className="text-emerald-300">{compressionInfo.compressedSizeKB} Ko</strong>
-                {gainPercent > 0 && ` (-${gainPercent}%)`}
+                {compressionInfo.originalSizeKB > 0 && (
+                  <span className="text-ink-400">{compressionInfo.originalSizeKB} Ko → </span>
+                )}
+                <strong className="text-emerald-300 font-semibold">{compressionInfo.compressedSizeKB} Ko</strong>
+                {gainPercent > 0 && <span className="text-ink-300"> (-{gainPercent}%)</span>}
               </span>
-            </motion.div>
+            </div>
           )}
 
           {/* Bouton tactile permanent pour mobile en haut à droite */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="sm:hidden absolute top-2 right-2 p-2 rounded-xl bg-black/60 text-white backdrop-blur-sm"
+            className="sm:hidden absolute top-2 right-2 p-1.5 rounded-lg bg-ink-950/70 text-white border border-white/10"
             title="Changer"
           >
             <Camera className="w-4 h-4" />

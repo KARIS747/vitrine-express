@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Category, Store } from '../types';
 import { dbService } from '../services/db';
 import { compressProductImage, CompressionResult } from '../utils/imageCompression';
-import { X, Upload, Check, Sparkles, Plus, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Check, Plus, Image as ImageIcon } from 'lucide-react';
 import { ImageUploadDropzone } from './ImageUploadDropzone';
 import { toast } from 'sonner';
 

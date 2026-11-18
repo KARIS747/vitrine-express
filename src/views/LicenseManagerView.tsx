@@ -68,26 +68,26 @@ async function copyText(text: string, successMessage: string) {
 
 function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: string) {
   const lines = [
-    `👋 Bonjour ! Votre vitrine ${store.name} est prête sur VitrineExpress.`,
+    `Bonjour, votre vitrine ${store.name} est activée sur VitrineExpress.`,
     '',
-    `🏪 Votre vitrine client : ${window.location.origin}/boutique/${store.slug}`,
-    `⚙️ Votre espace de gestion : ${window.location.origin}/merchant`,
+    `• Vitrine publique : ${window.location.origin}/boutique/${store.slug}`,
+    `• Espace de gestion : ${window.location.origin}/merchant`,
     '',
-    '🔐 Vos identifiants de connexion :',
+    'Identifiants d\'accès commerçant :',
     `• Clé de licence : ${licenseKey ?? store.license_key ?? '—'}`,
   ];
   if (pinCode) lines.push(`• Code PIN secret : ${pinCode}`);
   lines.push(
     '',
-    `📦 Formule : jusqu'à ${store.max_products} produits`,
-    `📅 Valable jusqu'au : ${formatDate(store.expires_at)}`,
+    `Quota souscrit : jusqu'à ${store.max_products} articles`,
+    `Validité : jusqu'au ${formatDate(store.expires_at)}`,
     '',
-    '💡 Pour démarrer :',
+    'Premiers pas recommandés :',
     '1. Connectez-vous sur votre espace de gestion.',
-    '2. Ajoutez vos photos de produits, vos prix et vos arrivages.',
-    '3. Imprimez votre affiche QR code pour votre comptoir !',
+    '2. Publiez vos photos de produits, prix et arrivages.',
+    '3. Téléchargez votre affiche QR code pour votre comptoir.',
     '',
-    'En cas de besoin, contactez Karis.',
+    'Support technique : contactez Karis.',
   );
   return lines.join('\n');
 }

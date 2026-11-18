@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Category, Store } from '../types';
 import { dbService } from '../services/db';
 import { compressProductImage, CompressionResult } from '../utils/imageCompression';
-import { X, Upload, Check, AlertCircle, Sparkles, Plus, Image as ImageIcon, MessageCircle, Mail } from 'lucide-react';
+import { X, Upload, Check, AlertCircle, Plus, Image as ImageIcon, MessageCircle, Mail } from 'lucide-react';
 import { ImageUploadDropzone } from './ImageUploadDropzone';
 import { toast } from 'sonner';
 
@@ -74,7 +74,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       const result = await compressProductImage(file, 1000, 0.82);
       setCompressionInfo(result);
       setImageUrl(result.dataUrl);
-      toast.success(`Photo optimisée : ${result.originalSizeKB} Ko ➔ ${result.compressedSizeKB} Ko`);
+      toast.success(`Photo optimisée : ${result.originalSizeKB} Ko → ${result.compressedSizeKB} Ko`);
     } catch (err: any) {
       toast.error("Erreur de compression d'image");
     } finally {

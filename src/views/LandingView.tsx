@@ -16,11 +16,11 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  Plus,
   QrCode,
   ScanLine,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Store as StoreIcon,
   UserRound,
 } from 'lucide-react';
@@ -219,7 +219,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-12 pt-10 sm:px-6 sm:pt-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14 lg:pb-16 lg:pt-20">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/70 px-3 py-1.5 text-[11px] font-semibold text-brand-800 shadow-xs backdrop-blur-sm">
-              <Sparkles className="h-3.5 w-3.5 text-brand-600" />
+              <ShieldCheck className="h-3.5 w-3.5 text-brand-600" />
               {t.landing.tagline}
             </div>
 
@@ -252,9 +252,9 @@ export const LandingView: React.FC<LandingViewProps> = ({
               <button
                 type="button"
                 onClick={onCreateStore}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-emerald-700 cursor-pointer"
               >
-                <Sparkles className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
                 <span>{language === 'fr' ? 'Créer ma vitrine gratuite' : 'Create free store'}</span>
               </button>
               <a
@@ -275,8 +275,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-3 rounded-[2.2rem] bg-gradient-to-br from-brand-200/50 via-transparent to-amber-200/40 blur-xl" />
-            <div className="relative rounded-[2rem] border border-ink-100 bg-white p-5 shadow-elevated sm:p-6">
+            <div className="relative rounded-[2rem] border border-ink-150 bg-white p-5 shadow-elevated sm:p-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">
