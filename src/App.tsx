@@ -37,7 +37,7 @@ function viewFromPath(): ViewMode {
     if (new URLSearchParams(window.location.search).get('store')) return 'storefront';
     return 'landing';
   }
-  if (path === '/admin') return 'admin';
+  if (path === '/karis-hq') return 'admin';
   if (path === '/creer-boutique' || path === '/register') return 'register';
   if (path === '/merchant' || path.startsWith('/merchant/')) return 'merchant';
   if (path.startsWith('/boutique/')) return 'storefront';
@@ -268,11 +268,11 @@ export const App: React.FC = () => {
 
     if (view === 'admin') {
       setCurrentView('admin');
-      window.history.pushState({}, '', '/admin');
+      window.history.pushState({}, '', '/karis-hq');
       updatePageSeo({
         title: 'Administration Plateforme',
         description: 'Gestion des licences et des boutiques VitrineExpress.',
-        canonicalPath: '/admin',
+        canonicalPath: '/karis-hq',
       });
       return;
     }
@@ -434,7 +434,6 @@ export const App: React.FC = () => {
           isLoadingStores={isStoresLoading}
           onOpenStoreBySlug={openStoreBySlug}
           onMerchantLogin={() => navigate('merchant')}
-          onAdmin={() => navigate('admin')}
           onCreateStore={() => navigate('register')}
         />
       )}

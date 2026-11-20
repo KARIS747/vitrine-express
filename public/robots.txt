@@ -2,6 +2,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /karis-hq
 Disallow: /merchant
 Disallow: /api/admin/
 Disallow: /api/merchant/

@@ -79,34 +79,38 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>{t.nav.home}</span>
           </button>
 
-          <button
-            onClick={() => onNavigate('register')}
-            className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-              currentView === 'register'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
-            }`}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Créer ma boutique</span>
-          </button>
+          {currentView !== 'storefront' && (
+            <>
+              <button
+                onClick={() => onNavigate('register')}
+                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  currentView === 'register'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Créer ma boutique</span>
+              </button>
 
-          <button
-            onClick={() => onNavigate('merchant')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
-              currentView === 'merchant'
-                ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-950'
-                : 'text-ink-600 dark:text-ink-300 hover:text-ink-950 dark:hover:text-white hover:bg-warm-100 dark:hover:bg-ink-800'
-            }`}
-          >
-            <UserRound className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">
-              {currentView === 'landing' ? t.nav.login : t.nav.merchantSpace}
-            </span>
-            <span className="sm:hidden">
-              {currentView === 'landing' ? t.nav.login : t.nav.merchantSpace}
-            </span>
-          </button>
+              <button
+                onClick={() => onNavigate('merchant')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  currentView === 'merchant'
+                    ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-950'
+                    : 'text-ink-600 dark:text-ink-300 hover:text-ink-950 dark:hover:text-white hover:bg-warm-100 dark:hover:bg-ink-800'
+                }`}
+              >
+                <UserRound className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  {currentView === 'landing' ? t.nav.login : t.nav.merchantSpace}
+                </span>
+                <span className="sm:hidden">
+                  {currentView === 'landing' ? t.nav.login : t.nav.merchantSpace}
+                </span>
+              </button>
+            </>
+          )}
         </nav>
       </div>
     </header>

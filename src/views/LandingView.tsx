@@ -43,7 +43,6 @@ interface LandingViewProps {
   isLoadingStores: boolean;
   onOpenStoreBySlug: (slug: string) => Promise<boolean>;
   onMerchantLogin: () => void;
-  onAdmin: () => void;
   onCreateStore: () => void;
 }
 
@@ -140,7 +139,6 @@ export const LandingView: React.FC<LandingViewProps> = ({
   isLoadingStores,
   onOpenStoreBySlug,
   onMerchantLogin,
-  onAdmin,
   onCreateStore,
 }) => {
   const { t, language } = useLanguage();
@@ -216,171 +214,52 @@ export const LandingView: React.FC<LandingViewProps> = ({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(5,150,105,0.10),transparent_36%),radial-gradient(circle_at_88%_18%,rgba(245,158,11,0.10),transparent_32%)]" />
         <div className="absolute inset-0 opacity-[0.035] bg-[radial-gradient(#0E1318_0.7px,transparent_0.7px)] [background-size:18px_18px]" />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pb-12 pt-10 sm:px-6 sm:pt-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14 lg:pb-16 lg:pt-20">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/70 px-3 py-1.5 text-[11px] font-semibold text-brand-800 shadow-xs backdrop-blur-sm">
-              <ShieldCheck className="h-3.5 w-3.5 text-brand-600" />
-              {t.landing.tagline}
-            </div>
-
-            <h1 className="mt-5 max-w-2xl font-display text-4xl font-bold leading-[1.04] tracking-tight text-ink-950 sm:text-5xl lg:text-6xl">
-              {t.landing.heroTitle}
-              <br />
-              <span className="text-brand-700">{t.landing.heroHighlight}</span>
-            </h1>
-
-            <p className="mt-5 max-w-xl text-sm leading-relaxed text-ink-600 sm:text-base">
-              {t.landing.heroDescription}
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium text-ink-500">
-              <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-brand-600" />
-                {t.landing.featureNoApp}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-brand-600" />
-                {t.landing.featureWhatsApp}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-brand-600" />
-                {t.landing.featureInstant}
-              </span>
-            </div>
-
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={onCreateStore}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-emerald-700 cursor-pointer"
-              >
-                <Plus className="h-4 w-4" />
-                <span>{language === 'fr' ? 'Créer ma vitrine gratuite' : 'Create free store'}</span>
-              </button>
-              <a
-                href="#boutiques"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-semibold text-ink-800 shadow-xs transition-colors hover:bg-warm-100"
-              >
-                <StoreIcon className="h-3.5 w-3.5" />
-                {t.landing.ctaDiscover}
-              </a>
-              <button
-                onClick={() => setIsScannerOpen(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-xs font-semibold text-ink-500 transition-colors hover:text-ink-950 cursor-pointer"
-              >
-                <QrCode className="h-3.5 w-3.5" />
-                {t.landing.ctaHasQr}
-              </button>
-            </div>
+        <div className="relative mx-auto max-w-4xl px-4 pb-14 pt-12 sm:px-6 sm:pb-20 sm:pt-16 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-brand-800 shadow-xs backdrop-blur-sm">
+            <ShieldCheck className="h-4 w-4 text-brand-600" />
+            {t.landing.tagline}
           </div>
 
-          <div className="relative">
-            <div className="relative rounded-[2rem] border border-ink-150 bg-white p-5 shadow-elevated sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">
-                    {t.landing.clientAccessTitle}
-                  </p>
-                  <h2 className="mt-1 font-display text-lg font-bold tracking-tight text-ink-950">
-                    {t.landing.clientAccessHeading}
-                  </h2>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-100 bg-brand-50 text-brand-700">
-                  <ShoppingBag className="h-5 w-5" />
-                </div>
-              </div>
+          <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-ink-950 sm:text-5xl lg:text-6xl max-w-3xl mx-auto leading-[1.08]">
+            {t.landing.heroTitle}{' '}
+            <span className="text-emerald-600">{t.landing.heroHighlight}</span>
+          </h1>
 
-              <button
-                onClick={() => setIsScannerOpen(true)}
-                className="group mt-5 flex w-full items-center justify-between gap-3 rounded-2xl bg-ink-950 p-3.5 text-left text-white shadow-card transition-colors hover:bg-black cursor-pointer"
-              >
-                <span className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand-400/20 bg-brand-500/15 text-brand-300">
-                    <ScanLine className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold">{t.landing.scanQrBtn}</span>
-                    <span className="mt-0.5 block text-[11px] text-white/50">
-                      {t.landing.scanQrSub}
-                    </span>
-                  </span>
-                </span>
-                <ArrowRight className="h-4 w-4 shrink-0 text-white/40 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
-              </button>
+          <p className="mt-5 max-w-2xl mx-auto text-base leading-relaxed text-ink-600 sm:text-lg">
+            {t.landing.heroDescription}
+          </p>
 
-              <div className="my-4 flex items-center gap-3">
-                <span className="h-px flex-1 bg-ink-100" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-                  {t.landing.or}
-                </span>
-                <span className="h-px flex-1 bg-ink-100" />
-              </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={onCreateStore}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            >
+              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <span>{language === 'fr' ? 'Créer ma vitrine gratuite' : 'Create free store'}</span>
+            </button>
+            <a
+              href="#boutiques"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-ink-200 bg-white px-5 py-3.5 text-sm font-semibold text-ink-800 shadow-xs transition-colors hover:bg-warm-100"
+            >
+              <StoreIcon className="h-4 w-4 text-ink-500" />
+              <span>{t.landing.ctaDiscover}</span>
+            </a>
+          </div>
 
-              <form onSubmit={handleLinkSubmit}>
-                <label
-                  htmlFor="store-link"
-                  className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500"
-                >
-                  {t.landing.pasteLinkPlaceholder}
-                </label>
-                <div className="mt-2 flex gap-2">
-                  <div className="relative min-w-0 flex-1">
-                    <Link2 className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
-                    <input
-                      id="store-link"
-                      type="text"
-                      inputMode="url"
-                      autoComplete="off"
-                      value={linkInput}
-                      onChange={(event) => {
-                        setLinkInput(event.target.value);
-                        if (linkError) setLinkError(null);
-                      }}
-                      placeholder="https://.../boutique/..."
-                      className="w-full rounded-xl border border-ink-200 bg-warm-50/60 py-2.5 pl-9 pr-3 text-xs text-ink-900 outline-none transition-all placeholder:text-ink-400 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/10"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={isPending || !linkInput.trim()}
-                    className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand-700 px-3.5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-55 cursor-pointer"
-                  >
-                    {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                    <span className="hidden sm:inline">{t.landing.openStoreBtn}</span>
-                  </button>
-                </div>
-                {linkError && (
-                  <p role="alert" className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-red-600">
-                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span>{linkError}</span>
-                  </p>
-                )}
-              </form>
-
-              <div className="mt-5 rounded-2xl border border-brand-100 bg-brand-50/70 p-3.5">
-                <div className="flex items-start gap-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-brand-200 bg-white text-brand-700">
-                    <UserRound className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-ink-900">{t.landing.merchantCardTitle}</p>
-                    <p className="mt-0.5 text-[11px] leading-relaxed text-ink-500">
-                      {t.landing.merchantCardText}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={onMerchantLogin}
-                  className="mt-3 inline-flex w-full items-center justify-between rounded-xl bg-white px-3 py-2.5 text-[11px] font-semibold text-ink-900 shadow-xs transition-colors hover:bg-warm-50 cursor-pointer"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <LockKeyhole className="h-3.5 w-3.5 text-brand-700" />
-                    {t.landing.merchantLoginBtn}
-                  </span>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-ink-400" />
-                </button>
-              </div>
-            </div>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 text-xs font-medium text-ink-500">
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              {t.landing.featureNoApp}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              {t.landing.featureWhatsApp}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              {t.landing.featureInstant}
+            </span>
           </div>
         </div>
       </section>
@@ -499,25 +378,6 @@ export const LandingView: React.FC<LandingViewProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-ink-600">
-            <a
-              href="https://wa.me/237681610040"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 hover:text-emerald-700 transition-colors"
-            >
-              <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
-              <span>WhatsApp : +237 681 610 040</span>
-            </a>
-            <a
-              href="mailto:karisdev369@gmail.com"
-              className="inline-flex items-center gap-1.5 hover:text-ink-950 transition-colors"
-            >
-              <Mail className="h-3.5 w-3.5 text-ink-400" />
-              <span>karisdev369@gmail.com</span>
-            </a>
-          </div>
-
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-ink-500">
             <a href="#boutiques" className="transition-colors hover:text-ink-950">
               {language === 'fr' ? 'Boutiques' : 'Stores'}
@@ -528,13 +388,6 @@ export const LandingView: React.FC<LandingViewProps> = ({
             >
               <LockKeyhole className="h-3.5 w-3.5" />
               {language === 'fr' ? 'Espace gérant' : 'Merchant space'}
-            </button>
-            <button
-              onClick={onAdmin}
-              className="inline-flex items-center gap-1.5 transition-colors hover:text-ink-950 cursor-pointer"
-            >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              {language === 'fr' ? 'Administration' : 'Admin'}
             </button>
             <LanguageSwitcher variant="footer" />
           </nav>

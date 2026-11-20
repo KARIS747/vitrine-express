@@ -4,6 +4,7 @@ export interface MockD1Options {
   categories?: any[];
   sessions?: any[];
   auth_attempts?: any[];
+  products?: any[];
 }
 
 export function createMockD1(initial: MockD1Options = {}) {
@@ -12,6 +13,7 @@ export function createMockD1(initial: MockD1Options = {}) {
   const categories = [...(initial.categories || [])];
   const sessions = [...(initial.sessions || [])];
   const authAttempts = [...(initial.auth_attempts || [])];
+  const products = [...(initial.products || [])];
 
   function createStatement(sql: string, params: any[] = []) {
     return {
@@ -28,6 +30,10 @@ export function createMockD1(initial: MockD1Options = {}) {
           const hash = params[0];
           return sessions.find((s) => s.token_hash === hash) || null;
         }
+        if (norm.includes('from stores where license_key = ? or slug = ?')) {
+          const [licKey, slugVal] = params;
+          return stores.find((s) => s.license_key === licKey || s.slug === slugVal) || null;
+        }
         if (norm.includes('from stores where slug')) {
           const slug = params[0];
           return stores.find((s) => s.slug === slug) || null;
@@ -36,9 +42,22 @@ export function createMockD1(initial: MockD1Options = {}) {
           const phone = params[0];
           return stores.find((s) => s.whatsapp_number === phone) || null;
         }
+        if (norm.includes('from stores where license_key')) {
+          const key = params[0];
+          return stores.find((s) => s.license_key === key) || null;
+        }
         if (norm.includes('from stores where id')) {
           const id = params[0];
           return stores.find((s) => s.id === id) || null;
+        }
+        if (norm.includes('from products where store_id') && norm.includes('count(*)')) {
+          const storeId = params[0];
+          const count = products.filter((p) => p.store_id === storeId).length;
+          return { total: count };
+        }
+        if (norm.includes('from categories where id = ? and store_id = ?')) {
+          const [catId, storeId] = params;
+          return categories.find((c) => c.id === catId && c.store_id === storeId) || null;
         }
         if (norm.includes('from stores s') && norm.includes('where s.id = ?')) {
           const id = params[0];
@@ -46,7 +65,7 @@ export function createMockD1(initial: MockD1Options = {}) {
           if (!st) return null;
           return {
             ...st,
-            current_products_count: 0,
+            current_products_count: products.filter((p) => p.store_id === id).length,
             price_paid: 5000,
             license_status: 'active',
           };
@@ -55,11 +74,19 @@ export function createMockD1(initial: MockD1Options = {}) {
       },
       async all() {
         const norm = sql.toLowerCase().replace(/\s+/g, ' ');
+        if (norm.includes('from products where store_id = ?')) {
+          const storeId = params[0];
+          return { results: products.filter((p) => p.store_id === storeId) };
+        }
+        if (norm.includes('from categories where store_id = ?')) {
+          const storeId = params[0];
+          return { results: categories.filter((c) => c.store_id === storeId) };
+        }
         if (norm.includes('from stores')) {
           return {
             results: stores.map((s) => ({
               ...s,
-              current_products_count: 0,
+              current_products_count: products.filter((p) => p.store_id === s.id).length,
               price_paid: 5000,
               license_status: 'active',
             })),
@@ -93,6 +120,12 @@ export function createMockD1(initial: MockD1Options = {}) {
           sessions.push({ token_hash: tokenHash, scope, store_id: storeId, expires_at: expiresAt, user_agent: userAgent });
           return { success: true };
         }
+        if (norm.includes('delete from sessions where token_hash')) {
+          const tokenHash = params[0];
+          const idx = sessions.findIndex((s) => s.token_hash === tokenHash);
+          if (idx >= 0) sessions.splice(idx, 1);
+          return { success: true };
+        }
         if (norm.includes('insert into stores')) {
           const storeObj: any = {
             id: params[0],
@@ -111,6 +144,32 @@ export function createMockD1(initial: MockD1Options = {}) {
             contact_email: norm.includes('contact_preference') ? params[6] : null,
           };
           stores.push(storeObj);
+          return { success: true };
+        }
+        if (norm.includes('insert into products')) {
+          const prodObj: any = {
+            id: params[0],
+            store_id: params[1],
+            category_id: params[2],
+            name: params[3],
+            description: params[4],
+            price: params[5],
+            image_url: params[6],
+            is_available: params[7],
+            restock_date: params[8],
+            is_featured: params[9],
+            sort_order: params[10],
+          };
+          products.push(prodObj);
+          return { success: true };
+        }
+        if (norm.includes('update products set')) {
+          return { success: true };
+        }
+        if (norm.includes('delete from products where id = ? and store_id = ?')) {
+          const [id, storeId] = params;
+          const idx = products.findIndex((p) => p.id === id && p.store_id === storeId);
+          if (idx >= 0) products.splice(idx, 1);
           return { success: true };
         }
         if (norm.includes('update stores set max_products')) {
@@ -148,6 +207,7 @@ export function createMockD1(initial: MockD1Options = {}) {
     categories,
     sessions,
     authAttempts,
+    products,
     prepare(sql: string) {
       return createStatement(sql);
     },
