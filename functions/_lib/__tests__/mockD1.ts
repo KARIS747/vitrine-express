@@ -5,6 +5,8 @@ export interface MockD1Options {
   sessions?: any[];
   auth_attempts?: any[];
   products?: any[];
+  notifications?: any[];
+  notification_reads?: any[];
 }
 
 export function createMockD1(initial: MockD1Options = {}) {
@@ -14,6 +16,8 @@ export function createMockD1(initial: MockD1Options = {}) {
   const sessions = [...(initial.sessions || [])];
   const authAttempts = [...(initial.auth_attempts || [])];
   const products = [...(initial.products || [])];
+  const notifications = [...(initial.notifications || [])];
+  const notificationReads = [...(initial.notification_reads || [])];
 
   function createStatement(sql: string, params: any[] = []) {
     return {
@@ -98,6 +102,30 @@ export function createMockD1(initial: MockD1Options = {}) {
         if (norm.includes('from categories where store_id = ?')) {
           const storeId = params[0];
           return { results: categories.filter((c) => c.store_id === storeId) };
+        }
+        if (norm.includes('from notifications n') && norm.includes('left join notification_reads')) {
+          const storeId = params[0];
+          const matched = notifications
+            .filter((n) => !n.store_id || n.store_id === storeId)
+            .map((n) => ({
+              ...n,
+              is_read: Boolean(
+                notificationReads.find(
+                  (nr) => nr.notification_id === n.id && nr.store_id === storeId,
+                ),
+              ),
+            }));
+          return { results: matched };
+        }
+        if (norm.includes('from notifications n') && norm.includes('left join stores s')) {
+          const matched = notifications.map((n) => {
+            const st = stores.find((s) => s.id === n.store_id);
+            return {
+              ...n,
+              store_name: st ? st.name : null,
+            };
+          });
+          return { results: matched };
         }
         if (norm.includes('from stores')) {
           return {
@@ -213,6 +241,16 @@ export function createMockD1(initial: MockD1Options = {}) {
           if (st) st.is_active = active;
           return { success: true };
         }
+        if (norm.includes('insert into notifications')) {
+          const [id, storeId, title, message, type, linkUrl] = params;
+          notifications.push({ id, store_id: storeId, title, message, type, link_url: linkUrl, created_at: new Date().toISOString() });
+          return { success: true };
+        }
+        if (norm.includes('insert into notification_reads')) {
+          const [id, notifId, storeId] = params;
+          notificationReads.push({ id, notification_id: notifId, store_id: storeId, read_at: new Date().toISOString() });
+          return { success: true };
+        }
         return { success: true, meta: { changes: 1 } };
       },
     };
@@ -225,6 +263,8 @@ export function createMockD1(initial: MockD1Options = {}) {
     sessions,
     authAttempts,
     products,
+    notifications,
+    notificationReads,
     prepare(sql: string) {
       return createStatement(sql);
     },
