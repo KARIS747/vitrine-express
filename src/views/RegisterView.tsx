@@ -782,7 +782,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                 <input
                   id="promo-code"
                   type="text"
-                  placeholder="Ex: VIP237 ou PROMO10"
+                  placeholder="Entrez votre code promo"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                   className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-ink-200 dark:border-ink-700 text-xs font-mono uppercase text-ink-900 dark:text-white placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 bg-warm-50/50 dark:bg-ink-950 transition-colors"
