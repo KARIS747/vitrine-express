@@ -75,6 +75,30 @@ describe('Merchant Auth API: /api/merchant/login, session, logout', () => {
     expect(data.store.slug).toBe('mode-paris');
   });
 
+  it('allows merchant login via store name (case-insensitive)', async () => {
+    const { db } = await createFixture();
+    const req = new Request('http://localhost/api/merchant/login', {
+      method: 'POST',
+      body: JSON.stringify({ licenseKey: 'MODE PARIS', pinCode: PIN }),
+    });
+    const res = await onRequestPost({ request: req, env: { DB: db, PIN_PEPPER: PEPPER } });
+    expect(res.status).toBe(200);
+    const data = await res.json() as any;
+    expect(data.store.slug).toBe('mode-paris');
+  });
+
+  it('allows merchant login via WhatsApp phone number', async () => {
+    const { db } = await createFixture();
+    const req = new Request('http://localhost/api/merchant/login', {
+      method: 'POST',
+      body: JSON.stringify({ licenseKey: '237699000000', pinCode: PIN }),
+    });
+    const res = await onRequestPost({ request: req, env: { DB: db, PIN_PEPPER: PEPPER } });
+    expect(res.status).toBe(200);
+    const data = await res.json() as any;
+    expect(data.store.slug).toBe('mode-paris');
+  });
+
   it('session endpoint returns store when cookie is valid and revokes on logout', async () => {
     const { db, store } = await createFixture();
     // Simulate active session in DB

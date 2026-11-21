@@ -24,7 +24,7 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
   onBack,
 }) => {
   const { t, language } = useLanguage();
-  const [licenseKey, setLicenseKey] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [pinCode, setPinCode] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,18 +34,18 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
     event.preventDefault();
     setError(null);
 
-    if (!licenseKey.trim() || !pinCode.trim()) {
+    if (!identifier.trim() || !pinCode.trim()) {
       setError(
         language === 'fr'
-          ? 'Renseignez votre clé de licence et votre code PIN.'
-          : 'Please enter your license key and PIN code.',
+          ? 'Renseignez le nom de votre boutique (ou votre numéro WhatsApp) et votre code PIN.'
+          : 'Please enter your store name (or WhatsApp number) and PIN code.',
       );
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await dbService.loginMerchant(licenseKey.trim(), pinCode.trim());
+      const result = await dbService.loginMerchant(identifier.trim(), pinCode.trim());
       if (!result.success || !result.store) {
         setError(result.error ?? t.merchant.loginError);
         toast.error(result.error ?? t.merchant.loginError);
@@ -133,8 +133,8 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
             </h2>
             <p className="text-xs text-ink-500 mt-1.5 leading-relaxed">
               {language === 'fr'
-                ? 'Connectez-vous avec la clé de licence et le code PIN transmis lors de la création de votre boutique.'
-                : 'Sign in with the license key and PIN code you received when your store was created.'}
+                ? 'Connectez-vous avec le nom de votre boutique (ou votre numéro WhatsApp) et votre code PIN secret.'
+                : 'Sign in with your store name (or WhatsApp number) and your secret PIN code.'}
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -143,16 +143,16 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
                   {t.merchant.licenseKeyLabel}
                 </label>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <StoreIcon className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    value={licenseKey}
-                    onChange={(event) => setLicenseKey(event.target.value)}
+                    value={identifier}
+                    onChange={(event) => setIdentifier(event.target.value)}
                     placeholder={t.merchant.licenseKeyPlaceholder}
                     autoCapitalize="characters"
                     autoComplete="username"
                     spellCheck={false}
-                    className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-ink-200 text-sm text-ink-950 font-mono tracking-wide outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/10 transition-all"
+                    className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-ink-200 text-sm text-ink-950 font-medium tracking-wide outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/10 transition-all"
                   />
                 </div>
               </div>

@@ -30,9 +30,26 @@ export function createMockD1(initial: MockD1Options = {}) {
           const hash = params[0];
           return sessions.find((s) => s.token_hash === hash) || null;
         }
-        if (norm.includes('from stores where license_key = ? or slug = ?')) {
-          const [licKey, slugVal] = params;
-          return stores.find((s) => s.license_key === licKey || s.slug === slugVal) || null;
+        if (norm.includes('from stores where lower(trim(name)) = lower(trim(?)) and is_active = 1')) {
+          const nameToMatch = String(params[0] ?? '').trim().toLowerCase();
+          return stores.find((s) => s.name && s.name.trim().toLowerCase() === nameToMatch && (s.is_active === 1 || s.is_active === true)) || null;
+        }
+        if (
+          norm.includes('from stores where license_key = ? or slug = ?') ||
+          norm.includes('where lower(trim(name)) = lower(trim(?))')
+        ) {
+          const [idVal, slugVal, licKey, , phone1, phone2] = params;
+          const searchNorm = String(idVal ?? '').trim().toLowerCase();
+          return (
+            stores.find(
+              (s) =>
+                (s.name && s.name.trim().toLowerCase() === searchNorm) ||
+                (s.slug && s.slug.toLowerCase() === String(slugVal ?? '').toLowerCase()) ||
+                (s.license_key && s.license_key === licKey) ||
+                (phone1 && s.whatsapp_number === phone1) ||
+                (phone2 && s.whatsapp_number === phone2),
+            ) || null
+          );
         }
         if (norm.includes('from stores where slug')) {
           const slug = params[0];

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import {
   AlertTriangle,
   ArrowLeft,
+  Bell,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -74,7 +75,8 @@ function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: str
     `• Espace de gestion : ${window.location.origin}/merchant`,
     '',
     'Identifiants d\'accès commerçant :',
-    `• Clé de licence : ${licenseKey ?? store.license_key ?? '—'}`,
+    `• Nom de la boutique : ${store.name}`,
+    `• Numéro WhatsApp : ${store.whatsapp_number}`,
   ];
   if (pinCode) lines.push(`• Code PIN secret : ${pinCode}`);
   lines.push(
@@ -87,7 +89,7 @@ function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: str
     '2. Publiez vos photos de produits, prix et arrivages.',
     '3. Téléchargez votre affiche QR code pour votre comptoir.',
     '',
-    'Support technique : contactez Karis.',
+    'Support technique : l\'équipe VitrineExpress sur WhatsApp.',
   );
   return lines.join('\n');
 }
@@ -114,6 +116,46 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   const [createdAccess, setCreatedAccess] = useState<CreatedStoreAccess | null>(null);
   const [pdfTarget, setPdfTarget] = useState<Store | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [notifTargetStoreId, setNotifTargetStoreId] = useState<string>('');
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifMessage, setNotifMessage] = useState('');
+  const [notifType, setNotifType] = useState<'info' | 'success' | 'warning' | 'tip'>('info');
+  const [notifLinkUrl, setNotifLinkUrl] = useState('');
+  const [isSendingNotif, setIsSendingNotif] = useState(false);
+
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notifTitle.trim() || !notifMessage.trim()) {
+      toast.error('Veuillez renseigner un titre et un message');
+      return;
+    }
+
+    setIsSendingNotif(true);
+    try {
+      const result = await dbService.sendAdminNotification({
+        storeId: notifTargetStoreId || null,
+        title: notifTitle.trim(),
+        message: notifMessage.trim(),
+        type: notifType,
+        linkUrl: notifLinkUrl.trim() || undefined,
+      });
+
+      if (result.success) {
+        toast.success(notifTargetStoreId ? 'Notification ciblée envoyée !' : 'Notification générale diffusée à toutes les boutiques !');
+        setIsNotifModalOpen(false);
+        setNotifTitle('');
+        setNotifMessage('');
+        setNotifLinkUrl('');
+        setNotifTargetStoreId('');
+      } else {
+        toast.error(result.error ?? "Erreur lors de l'envoi");
+      }
+    } finally {
+      setIsSendingNotif(false);
+    }
+  };
 
   const loadStores = useCallback(async () => {
     setIsLoading(true);
@@ -516,13 +558,22 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
             </p>
           </div>
 
-          <button
-            onClick={() => setIsCreateOpen(true)}
-            className="relative inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-ink-950 font-bold text-sm transition-colors shadow-sm cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            Créer une boutique
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setIsNotifModalOpen(true)}
+              className="relative inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs border border-white/20 transition-colors shadow-sm cursor-pointer shrink-0"
+            >
+              <Bell className="w-4 h-4 text-amber-300" />
+              Diffuser une notification
+            </button>
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="relative inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-ink-950 font-bold text-sm transition-colors shadow-sm cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Créer une boutique
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -1159,6 +1210,131 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 Le PDF se termine par une note « Document confidentiel ».
               </p>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal d'envoi de notification (Générale ou Ciblée) */}
+      {isNotifModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full border border-ink-100 shadow-elevated">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-lg text-ink-950">
+                    Diffuser une notification
+                  </h3>
+                  <p className="text-xs text-ink-500">
+                    Envoyez un message in-app aux commerçants
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNotifModalOpen(false)}
+                className="p-1 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-warm-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendNotification} className="space-y-3.5">
+              <div>
+                <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
+                  Destinataire *
+                </label>
+                <select
+                  value={notifTargetStoreId}
+                  onChange={(e) => setNotifTargetStoreId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500"
+                >
+                  <option value="">Toutes les boutiques (Diffusion générale)</option>
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
+                    Type *
+                  </label>
+                  <select
+                    value={notifType}
+                    onChange={(e) => setNotifType(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500"
+                  >
+                    <option value="info">Information</option>
+                    <option value="tip">Conseil de vente</option>
+                    <option value="warning">Alerte</option>
+                    <option value="success">Succès</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
+                    Lien optionnel
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={notifLinkUrl}
+                    onChange={(e) => setNotifLinkUrl(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
+                  Titre de la notification *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex : Conseil du weekend pour vos commandes WhatsApp"
+                  value={notifTitle}
+                  onChange={(e) => setNotifTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
+                  Message *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Rédigez votre message aux commerçants..."
+                  value={notifMessage}
+                  onChange={(e) => setNotifMessage(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNotifModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-ink-200 text-xs font-semibold text-ink-700 hover:bg-warm-100 cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingNotif}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-ink-950 text-xs font-bold cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {isSendingNotif ? 'Envoi...' : 'Envoyer la notification'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

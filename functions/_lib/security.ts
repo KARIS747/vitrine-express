@@ -598,9 +598,23 @@ export async function authenticateMerchantLogin(
     rateLimitState(db, idKey),
   ]);
 
+  const digitsOnly = normalizedIdentifier.replace(/[^0-9]/g, "");
   const store = await db
-    .prepare(`SELECT * FROM stores WHERE license_key = ? OR slug = ?`)
-    .bind(normalizedIdentifier, normalizedIdentifier.toLowerCase())
+    .prepare(`
+      SELECT * FROM stores 
+      WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+         OR slug = ?
+         OR license_key = ?
+         OR (length(?) >= 8 AND (whatsapp_number = ? OR whatsapp_number = ?))
+    `)
+    .bind(
+      normalizedIdentifier,
+      normalizedIdentifier.toLowerCase(),
+      normalizedIdentifier,
+      digitsOnly,
+      digitsOnly,
+      digitsOnly.startsWith("237") ? digitsOnly.slice(3) : `237${digitsOnly}`,
+    )
     .first();
 
   const pinResult = store

@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Store as StoreIcon,
+  Tag,
 } from 'lucide-react';
 
 interface RegisterViewProps {
@@ -52,12 +53,26 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
   const [pinCode, setPinCode] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
   const [showPin, setShowPin] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'decouverte' | 'pro' | 'premium'>('decouverte');
+  const [promoCode, setPromoCode] = useState('');
 
   // UI State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdStore, setCreatedStore] = useState<Store | null>(null);
   const [createdPin, setCreatedPin] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [pendingPlanInfo, setPendingPlanInfo] = useState<{
+    plan: 'decouverte' | 'pro' | 'premium';
+    promoCode: string;
+    promoApplied: boolean;
+    priceDue: number;
+  } | null>(null);
+
+  const VALID_PROMO_CODES = useMemo(() => ['VIP237', 'PROMO10', 'EXPRESS', 'LANCEMENT', 'DOUALA', 'YAOUNDE'], []);
+  const cleanPromo = promoCode.trim().toUpperCase();
+  const isPromoValid = VALID_PROMO_CODES.includes(cleanPromo);
+  const proPrice = isPromoValid ? 5000 : 8000;
+  const premiumPrice = isPromoValid ? 14000 : 20000;
 
   // Slug preview computation
   const previewSlug = useMemo(() => {
@@ -160,6 +175,8 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
         contactPreference,
         contactEmail: contactPreference === 'email' ? contactEmail.trim() : undefined,
         pinCode: pinCode.trim(),
+        selectedPlan,
+        promoCode: promoCode.trim(),
       });
 
       if (!res.success || !res.store) {
@@ -170,6 +187,12 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
       toast.success('Boutique créée avec succès. Bienvenue sur VitrineExpress !');
       setCreatedStore(res.store);
       setCreatedPin(pinCode.trim());
+      setPendingPlanInfo({
+        plan: selectedPlan,
+        promoCode: cleanPromo,
+        promoApplied: Boolean(res.promoApplied),
+        priceDue: res.priceDue ?? (selectedPlan === 'pro' ? proPrice : selectedPlan === 'premium' ? premiumPrice : 0),
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -251,13 +274,47 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
           {/* Credentials Reminder */}
           <div className="mt-4 p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/60 text-left flex items-start gap-3 text-xs text-amber-900 dark:text-amber-200">
             <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold">Code secret pour administrer vos articles :</p>
-              <p className="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">
-                Code PIN : <strong className="font-mono text-sm text-ink-950 dark:text-white">{createdPin}</strong> · Conservez-le précieusement.
-              </p>
+            <div className="w-full">
+              <p className="font-semibold text-ink-950 dark:text-white">Vos identifiants de connexion :</p>
+              <div className="mt-1 space-y-0.5 text-[11px] text-amber-900 dark:text-amber-300">
+                <p>• Nom de boutique : <strong className="font-semibold text-ink-950 dark:text-white">{createdStore.name}</strong></p>
+                <p>• Numéro WhatsApp : <strong className="font-semibold text-ink-950 dark:text-white">{createdStore.whatsapp_number}</strong></p>
+                <p>• Code PIN secret : <strong className="font-mono text-xs text-ink-950 dark:text-white">{createdPin}</strong></p>
+              </div>
             </div>
           </div>
+
+          {/* Optionnel : Activation de forfait payant via conseiller WhatsApp */}
+          {pendingPlanInfo && pendingPlanInfo.plan !== 'decouverte' && (
+            <div className="mt-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-left">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                  {pendingPlanInfo.plan === 'pro' ? 'Activation Plan Pro (30 articles)' : 'Activation Plan Premium (Illimité)'}
+                </span>
+                <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                  {pendingPlanInfo.priceDue.toLocaleString('fr-FR')} FCFA / an
+                </span>
+              </div>
+              <p className="text-[11px] text-ink-600 dark:text-ink-400 leading-relaxed mb-3">
+                Votre vitrine est active en mode découverte. Pour débloquer votre quota de {pendingPlanInfo.plan === 'pro' ? '30 articles' : 'produits illimités'}, finalisez votre souscription par Orange Money ou MTN MoMo auprès d'un conseiller VitrineExpress.
+              </p>
+              <a
+                href={`https://wa.me/237681610040?text=${encodeURIComponent(
+                  `Bonjour, je viens de créer la boutique ${createdStore.name} sur VitrineExpress et je souhaite activer le ${
+                    pendingPlanInfo.plan === 'pro' ? 'Plan Pro (30 articles)' : 'Plan Premium (Illimité)'
+                  }${
+                    pendingPlanInfo.promoApplied ? ` avec le code promo ${pendingPlanInfo.promoCode}` : ''
+                  } (${pendingPlanInfo.priceDue.toLocaleString('fr-FR')} FCFA). Voici le lien : ${fullStoreUrl}. Comment puis-je régler par Orange Money ou MTN MoMo ?`,
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors shadow-xs"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Finaliser l'activation avec un conseiller sur WhatsApp</span>
+              </a>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="mt-7 flex flex-col gap-3">
@@ -620,6 +677,117 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               </div>
             </div>
 
+            {/* 6. Choix de la formule */}
+            <div className="pt-3 border-t border-ink-100 dark:border-ink-800">
+              <label className="block text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider mb-1">
+                Choisissez votre formule de départ
+              </label>
+              <p className="text-[11px] text-ink-500 dark:text-ink-400 mb-3">
+                Commencez gratuitement ou optez pour une formule avec plus de capacité.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Découverte */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan('decouverte')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative ${
+                    selectedPlan === 'decouverte'
+                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/30 ring-1 ring-emerald-600'
+                      : 'border-ink-200 dark:border-ink-800 hover:border-ink-300 dark:hover:border-ink-700 bg-warm-50/30 dark:bg-ink-950'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-ink-950 dark:text-white">Découverte</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
+                      0 FCFA
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">8 articles</p>
+                  <p className="text-[10px] text-ink-500 dark:text-ink-400 mt-1">Catalogue WhatsApp gratuit à vie</p>
+                </button>
+
+                {/* Pro */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan('pro')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative ${
+                    selectedPlan === 'pro'
+                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/30 ring-1 ring-emerald-600'
+                      : 'border-ink-200 dark:border-ink-800 hover:border-ink-300 dark:hover:border-ink-700 bg-warm-50/30 dark:bg-ink-950'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-ink-950 dark:text-white">Plan Pro</span>
+                    {isPromoValid ? (
+                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                        <span className="line-through text-ink-400 mr-1">8 000</span>
+                        5 000 FCFA
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-ink-700 dark:text-ink-300">
+                        8 000 FCFA/an
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">30 articles</p>
+                  <p className="text-[10px] text-ink-500 dark:text-ink-400 mt-1">Boutiques en croissance</p>
+                </button>
+
+                {/* Premium */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan('premium')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative ${
+                    selectedPlan === 'premium'
+                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/30 ring-1 ring-emerald-600'
+                      : 'border-ink-200 dark:border-ink-800 hover:border-ink-300 dark:hover:border-ink-700 bg-warm-50/30 dark:bg-ink-950'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-ink-950 dark:text-white">Premium</span>
+                    {isPromoValid ? (
+                      <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                        <span className="line-through text-ink-400 mr-1">20 000</span>
+                        14 000 FCFA
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-ink-700 dark:text-ink-300">
+                        20 000 FCFA/an
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Articles illimités</p>
+                  <p className="text-[10px] text-ink-500 dark:text-ink-400 mt-1">Grands catalogues</p>
+                </button>
+              </div>
+            </div>
+
+            {/* 7. Code promo (optionnel) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="promo-code" className="text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider">
+                  Code promo ou invitation (optionnel)
+                </label>
+                {isPromoValid && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <Check className="w-3 h-3" /> -3 000 FCFA sur Pro / -6 000 FCFA sur Premium
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <Tag className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  id="promo-code"
+                  type="text"
+                  placeholder="Ex: VIP237 ou PROMO10"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-ink-200 dark:border-ink-700 text-xs font-mono uppercase text-ink-900 dark:text-white placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 bg-warm-50/50 dark:bg-ink-950 transition-colors"
+                />
+              </div>
+            </div>
+
             {/* Bouton de soumission */}
             <div className="pt-3">
               <button
@@ -634,7 +802,13 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                   </>
                 ) : (
                   <>
-                    <span>Créer ma vitrine (8 articles gratuits)</span>
+                    <span>
+                      {selectedPlan === 'decouverte'
+                        ? 'Créer ma vitrine (8 articles gratuits)'
+                        : selectedPlan === 'pro'
+                        ? `Créer ma vitrine · Plan Pro (${proPrice.toLocaleString('fr-FR')} FCFA/an)`
+                        : `Créer ma vitrine · Plan Premium (${premiumPrice.toLocaleString('fr-FR')} FCFA/an)`}
+                    </span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

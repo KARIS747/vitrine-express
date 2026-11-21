@@ -143,9 +143,44 @@ describe('Register API: POST /api/register', () => {
     expect(body.store.contact_email).toBe('contact@elegance.cm');
   });
 
+  it('rejects with 409 when store name is already used by an active store', async () => {
+    const existingStore = {
+      id: 'store_existing_name',
+      name: 'Boutique Elegance',
+      slug: 'boutique-elegance-old',
+      whatsapp_number: '237699999999',
+      is_active: 1,
+    };
+    const db = createMockD1({ stores: [existingStore] });
+    const req = createRequest(basePayload);
+    const res = await onRequestPost({ request: req, env: { DB: db, PIN_PEPPER } });
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain('déjà utilisé par une autre boutique');
+  });
+
+  it('creates store on Plan Pro with valid promo code VIP237 reducing price to 5000 FCFA', async () => {
+    const db = createMockD1();
+    const req = createRequest({
+      ...basePayload,
+      selectedPlan: 'pro',
+      promoCode: 'VIP237',
+    });
+    const res = await onRequestPost({ request: req, env: { DB: db, PIN_PEPPER } });
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.selectedPlan).toBe('pro');
+    expect(body.promoApplied).toBe(true);
+    expect(body.priceDue).toBe(5000);
+  });
+
   it('handles slug collisions by appending a suffix', async () => {
     const existing = {
       id: 'store_first',
+      name: 'Different Name',
       slug: 'boutique-elegance',
       whatsapp_number: '237677000000',
       is_active: 1,

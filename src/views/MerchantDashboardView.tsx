@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Store, Category, Product } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Store, Category, Product, InAppNotification } from '../types';
 import { dbService, StoreSettingsPayload } from '../services/db';
 import { formatFCFA, formatDate } from '../utils/formatters';
 import { useLanguage } from '../utils/i18n';
@@ -9,8 +9,10 @@ import { EditProductModal } from '../components/EditProductModal';
 import { CategoryManagerModal } from '../components/CategoryManagerModal';
 import { QRPosterModal } from '../components/QRPosterModal';
 import { StoreSettingsModal } from '../components/StoreSettingsModal';
+import { NotificationCenterModal } from '../components/NotificationCenterModal';
 import {
   ArrowUpRight,
+  Bell,
   Plus,
   QrCode,
   Share2,
@@ -52,6 +54,30 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [restockModalProduct, setRestockModalProduct] = useState<Product | null>(null);
   const [tempRestockDate, setTempRestockDate] = useState('');
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [notifications, setNotifications] = useState<InAppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    dbService.getMerchantNotifications().then((res) => {
+      if (res.success) {
+        setNotifications(res.notifications);
+        setUnreadCount(res.unreadCount);
+      }
+    });
+  }, []);
+
+  const handleMarkAllAsRead = async () => {
+    await dbService.markNotificationRead(undefined, true);
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    await dbService.markNotificationRead(id, false);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  };
 
   const maxProducts = store.max_products || 20;
   const currentCount = products.length;
@@ -202,15 +228,28 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-ink-500 mt-0.5">
-                {language === 'fr' ? 'Licence active • Expire le' : 'Active licence • Expires on'}{' '}
+                {language === 'fr' ? 'Abonnement actif • Expire le' : 'Active plan • Expires on'}{' '}
                 <strong>{formatDate(store.expires_at, language)}</strong>
-                {language === 'fr' ? ' (Formule 5 000 FCFA/an)' : ' (Plan 5,000 FCFA/yr)'}
               </p>
             </div>
           </div>
 
           {/* Quick Actions */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsNotifModalOpen(true)}
+              className="relative px-3 py-2 rounded-xl border border-ink-200 hover:bg-warm-100 text-xs font-semibold text-ink-800 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Centre de notifications"
+            >
+              <Bell className="w-3.5 h-3.5 text-brand-700" />
+              <span>{language === 'fr' ? 'Notifications' : 'Notifications'}</span>
+              {unreadCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-mono text-[10px] font-bold">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => setIsSettingsModalOpen(true)}
               className="px-3.5 py-2 rounded-xl border border-brand-200 bg-brand-50 hover:bg-brand-100 text-xs font-semibold text-brand-900 flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -309,12 +348,12 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
                     Passer au Plan Pro
                   </span>
                   <span className="text-[11px] text-amber-800">
-                    Débloquez 30 à 50 produits. Contactez Karis :
+                    Débloquez 30 articles ou l'illimité avec un conseiller :
                   </span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <a
-                    href={`https://wa.me/237681610040?text=${encodeURIComponent(`Bonjour Karis, je suis ${store.name} (${store.slug}). J'ai atteint mon quota de ${maxProducts} produits et je souhaite passer au Plan Pro.`)}`}
+                    href={`https://wa.me/237681610040?text=${encodeURIComponent(`Bonjour, je suis la boutique ${store.name} (${store.slug}). J'ai atteint mon quota de ${maxProducts} produits et je souhaite passer au Plan Pro.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors"
@@ -323,7 +362,7 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
                     <span>WhatsApp</span>
                   </a>
                   <a
-                    href={`mailto:karisdev369@gmail.com?subject=${encodeURIComponent(`Demande Plan Pro - ${store.name}`)}&body=${encodeURIComponent(`Bonjour Karis,\n\nJe suis le gérant de la boutique ${store.name} (Slug: ${store.slug}, Tel: ${store.whatsapp_number}).\n\nJ'ai atteint mon quota actuel de ${maxProducts} produits et je souhaite souscrire au Plan Pro.\n\nMerci !`)}`}
+                    href={`mailto:karisdev369@gmail.com?subject=${encodeURIComponent(`Demande Plan Pro - ${store.name}`)}&body=${encodeURIComponent(`Bonjour,\n\nJe suis le gérant de la boutique ${store.name} (Slug: ${store.slug}, Tel: ${store.whatsapp_number}).\n\nJ'ai atteint mon quota actuel de ${maxProducts} produits et je souhaite souscrire au Plan Pro.\n\nMerci !`)}`}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-200 bg-white hover:bg-warm-100 text-ink-800 text-xs font-semibold shadow-xs transition-colors"
                   >
                     <Mail className="w-3.5 h-3.5 text-ink-500" />
@@ -592,6 +631,14 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
           </div>
         </div>
       )}
+      {/* Centre de notifications */}
+      <NotificationCenterModal
+        isOpen={isNotifModalOpen}
+        onClose={() => setIsNotifModalOpen(false)}
+        notifications={notifications}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        onMarkAsRead={handleMarkAsRead}
+      />
     </div>
   );
 };

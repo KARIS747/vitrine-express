@@ -65,6 +65,8 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       contactPreference = "whatsapp",
       contactEmail,
       pinCode,
+      selectedPlan = "decouverte",
+      promoCode = "",
     } = body;
 
     const cleanName = String(storeName ?? "").trim().slice(0, 80);
@@ -74,6 +76,20 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     const pref = contactPreference === "email" ? "email" : "whatsapp";
     const cleanEmail = String(contactEmail ?? "").trim().toLowerCase().slice(0, 100);
     const cleanPin = String(pinCode ?? "").trim();
+    const cleanPlan = ["decouverte", "pro", "premium"].includes(String(selectedPlan).toLowerCase())
+      ? String(selectedPlan).toLowerCase()
+      : "decouverte";
+    const cleanPromo = String(promoCode ?? "").trim().toUpperCase();
+
+    const VALID_PROMO_CODES = ["VIP237", "PROMO10", "EXPRESS", "LANCEMENT", "DOUALA", "YAOUNDE"];
+    const isPromoValid = VALID_PROMO_CODES.includes(cleanPromo);
+
+    let priceDue = 0;
+    if (cleanPlan === "pro") {
+      priceDue = isPromoValid ? 5000 : 8000;
+    } else if (cleanPlan === "premium") {
+      priceDue = isPromoValid ? 14000 : 20000;
+    }
 
     // 2. Validations métier
     if (!cleanName || cleanName.length < 2) {
@@ -94,7 +110,20 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       return json({ error: "Le code PIN secret doit comporter entre 4 et 12 caractères" }, 400);
     }
 
-    // 3. Vérifier si ce numéro WhatsApp possède déjà une boutique active
+    // 3. Vérifier l'unicité du nom de la boutique (insensible à la casse)
+    const existingWithName = await db
+      .prepare(`SELECT id FROM stores WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND is_active = 1`)
+      .bind(cleanName)
+      .first();
+
+    if (existingWithName) {
+      await recordFailure(db, ipKey, RATE_LIMITS.merchantLogin);
+      return json({
+        error: `Le nom « ${cleanName} » est déjà utilisé par une autre boutique. Choisissez un nom distinct (ex: ${cleanName} Douala ou ${cleanName} Akwa).`,
+      }, 409);
+    }
+
+    // 4. Vérifier si ce numéro WhatsApp possède déjà une boutique active
     const existingWithPhone = await db
       .prepare(`SELECT id FROM stores WHERE whatsapp_number = ? AND is_active = 1`)
       .bind(cleanWhatsApp)
@@ -136,7 +165,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
     const pinHash = await hashPin(cleanPin, pepper);
 
-    const contactNotes = `Plan Découverte Gratuit (8 produits) | Contact favori : ${pref} | Email : ${cleanEmail || "N/A"}`;
+    const contactNotes = `Formule demandée : ${cleanPlan.toUpperCase()} (Dû: ${priceDue} FCFA) | Code promo : ${cleanPromo || "aucun"}${isPromoValid ? " [VALIDE]" : ""} | Contact favori : ${pref} | Email : ${cleanEmail || "N/A"}`;
 
     // 6. Insertion sécurisée en base D1 (avec fallback si colonnes contact_preference pas encore migrées)
     try {
@@ -252,13 +281,20 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     return json(
       {
         success: true,
-        message: "Votre boutique gratuite (8 produits) a été créée avec succès !",
+        message:
+          cleanPlan === "decouverte"
+            ? "Votre boutique gratuite (8 produits) a été créée avec succès !"
+            : `Votre vitrine a été créée ! Pour activer votre ${cleanPlan === "pro" ? "Plan Pro (30 articles)" : "Plan Premium (illimité)"}, finalisez votre règlement (${priceDue} FCFA).`,
         store: {
           ...publicStore(storeCreated),
           current_products_count: 0,
         },
         licenseKey,
         pinCode: cleanPin,
+        selectedPlan: cleanPlan,
+        promoCode: cleanPromo,
+        promoApplied: isPromoValid,
+        priceDue,
       },
       201,
       {

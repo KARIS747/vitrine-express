@@ -1,4 +1,4 @@
-import { Store, Product, Category } from '../types';
+import { Store, Product, Category, InAppNotification } from '../types';
 
 // ============================================================
 //  dbService — API Cloudflare Pages + D1
@@ -227,12 +227,12 @@ class DatabaseService {
   //  AUTHENTIFICATION BOUTIQUIER
   // ----------------------------------------------------------
 
-  async loginMerchant(licenseKey: string, pinCode: string): Promise<{ success: boolean; store?: Store; error?: string }> {
+  async loginMerchant(identifier: string, pinCode: string): Promise<{ success: boolean; store?: Store; error?: string }> {
     try {
       const res = await fetch(`${API_BASE}/merchant/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ licenseKey, pinCode }),
+        body: JSON.stringify({ licenseKey: identifier, pinCode }),
       });
       const data = await parseJson(res);
       if (!res.ok || !data.success || !data.store) {
@@ -259,11 +259,17 @@ class DatabaseService {
     contactPreference: 'whatsapp' | 'email';
     contactEmail?: string;
     pinCode: string;
+    selectedPlan?: 'decouverte' | 'pro' | 'premium';
+    promoCode?: string;
   }): Promise<{
     success: boolean;
     store?: Store;
     licenseKey?: string;
     pinCode?: string;
+    selectedPlan?: string;
+    promoCode?: string;
+    promoApplied?: boolean;
+    priceDue?: number;
     message?: string;
     error?: string;
   }> {
@@ -288,6 +294,10 @@ class DatabaseService {
         store: data.store,
         licenseKey: data.licenseKey,
         pinCode: data.pinCode,
+        selectedPlan: data.selectedPlan,
+        promoCode: data.promoCode,
+        promoApplied: data.promoApplied,
+        priceDue: data.priceDue,
         message: data.message,
       };
     } catch {
@@ -665,6 +675,67 @@ class DatabaseService {
         : { success: false, error: data.error ?? 'Erreur de mise à jour du quota' };
     } catch {
       return { success: false, error: 'Erreur réseau' };
+    }
+  }
+
+  // ----------------------------------------------------------
+  //  NOTIFICATIONS IN-APP
+  // ----------------------------------------------------------
+
+  async getMerchantNotifications(): Promise<{ success: boolean; notifications: InAppNotification[]; unreadCount: number; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/merchant/notifications`);
+      const data = await parseJson(res);
+      if (!res.ok || !data.success) {
+        return { success: false, notifications: [], unreadCount: 0, error: data.error ?? 'Erreur lors du chargement des notifications' };
+      }
+      return { success: true, notifications: data.notifications ?? [], unreadCount: data.unreadCount ?? 0 };
+    } catch {
+      return { success: false, notifications: [], unreadCount: 0, error: 'Erreur réseau' };
+    }
+  }
+
+  async markNotificationRead(notificationId?: string, markAllRead = false): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/merchant/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId, markAllRead }),
+      });
+      const data = await parseJson(res);
+      return res.ok ? { success: true } : { success: false, error: data.error ?? 'Erreur lors du marquage' };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
+
+  async sendAdminNotification(payload: {
+    storeId?: string | null;
+    title: string;
+    message: string;
+    type?: string;
+    linkUrl?: string;
+  }): Promise<{ success: boolean; notification?: any; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await parseJson(res);
+      return res.ok ? { success: true, notification: data.notification } : { success: false, error: data.error ?? "Erreur d'envoi" };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
+    }
+  }
+
+  async getAdminNotifications(): Promise<{ success: boolean; notifications: any[]; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/notifications`);
+      const data = await parseJson(res);
+      return res.ok ? { success: true, notifications: data.notifications ?? [] } : { success: false, notifications: [], error: data.error ?? 'Erreur' };
+    } catch {
+      return { success: false, notifications: [], error: 'Erreur réseau' };
     }
   }
 }

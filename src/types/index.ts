@@ -62,4 +62,15 @@ export interface License {
   created_at?: string;
 }
 
+export interface InAppNotification {
+  id: string;
+  storeId?: string | null;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'tip';
+  linkUrl?: string | null;
+  createdAt: string;
+  isRead?: boolean;
+}
+
 export type ViewMode = 'landing' | 'register' | 'storefront' | 'merchant' | 'admin' | 'print-poster' | 'not-found';

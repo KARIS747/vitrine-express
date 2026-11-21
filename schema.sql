@@ -179,3 +179,32 @@ INSERT OR IGNORE INTO products (
     'https://images.unsplash.com/photo-1539185441755-769473a23570?auto=format&fit=crop&w=800&q=80', 
     0, '2026-11-12', 0, 4
 );
+
+-- 8. Table des Notifications In-App (Générales et Ciblées)
+CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    store_id TEXT,                         -- NULL = diffusion générale pour toutes les boutiques, ou store_id pour ciblée
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT DEFAULT 'info',              -- 'info' | 'success' | 'warning' | 'tip'
+    link_url TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_store ON notifications(store_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);
+
+-- 9. Suivi des lectures de notifications par boutique
+CREATE TABLE IF NOT EXISTS notification_reads (
+    id TEXT PRIMARY KEY,
+    notification_id TEXT NOT NULL,
+    store_id TEXT NOT NULL,
+    read_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE,
+    FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
+    UNIQUE(notification_id, store_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notif_reads_store ON notification_reads(store_id);
+
