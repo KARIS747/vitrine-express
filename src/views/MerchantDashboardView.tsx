@@ -79,7 +79,14 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
     setUnreadCount((prev) => Math.max(0, prev - 1));
   };
 
-  const maxProducts = store.max_products || 20;
+  const rawMax = store.max_products;
+  const maxProducts = rawMax && rawMax > 0 ? rawMax : 999;
+  const planLabel =
+    maxProducts <= 8
+      ? (language === 'fr' ? 'Formule Découverte · 8 articles' : 'Discovery Plan · 8 items')
+      : maxProducts <= 30
+        ? (language === 'fr' ? 'Formule Pro · 30 articles' : 'Pro Plan · 30 items')
+        : (language === 'fr' ? 'Formule Premium · articles illimités' : 'Premium Plan · unlimited items');
   const currentCount = products.length;
   const percentUsed = Math.min(100, Math.round((currentCount / maxProducts) * 100));
   const isLimitReached = currentCount >= maxProducts;
@@ -228,7 +235,7 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-ink-500 mt-0.5">
-                {language === 'fr' ? 'Abonnement actif • Expire le' : 'Active plan • Expires on'}{' '}
+                {planLabel} • {language === 'fr' ? 'Expire le' : 'Expires on'}{' '}
                 <strong>{formatDate(store.expires_at, language)}</strong>
               </p>
             </div>
