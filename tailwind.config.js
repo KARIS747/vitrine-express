@@ -46,11 +46,27 @@ export default {
           500: '#F59E0B',
           600: '#D97706', // Warm amber for restock dates
           700: '#B45309',
+        },
+        ledger: {
+          ink: '#10201B',
+          paper: '#EDEFE8',
+          surface: '#F9FAF6',
+          line: '#D6DCD2',
+          muted: '#4F5B51',
+          green: '#0B6B4F',
+          'green-soft': '#DCEBE2',
+          brass: '#B4883C',
+          'brass-soft': '#F2E7D2',
+          red: '#A33A2C',
+          'red-soft': '#F4E1DC',
         }
       },
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
         display: ['"Outfit"', 'sans-serif'],
+        registry: ['Fraunces', 'Georgia', 'serif'],
+        ledger: ['"IBM Plex Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        'ledger-mono': ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
         'xs': '0 1px 2px 0 rgba(15, 23, 42, 0.05)',

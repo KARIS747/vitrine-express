@@ -322,7 +322,7 @@ export const App: React.FC = () => {
   const handleMerchantLogin = async (store: Store) => {
     const data = await dbService.getStoreBySlug(store.slug);
     if (!data) {
-      toast.error("Impossible de charger votre espace. Contactez Karis.");
+      toast.error("Impossible de charger votre espace. Contactez l'équipe VitrineExpress.");
       return;
     }
 

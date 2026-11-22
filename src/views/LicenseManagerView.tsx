@@ -1,14 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Store } from '../types';
 import { dbService, CreatedStoreAccess } from '../services/db';
-import { formatDate, getDaysRemaining, formatFCFA } from '../utils/formatters';
+import { formatDate, formatFCFA } from '../utils/formatters';
 import { downloadStoreAccessPdf } from '../utils/accessSheet';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
   ArrowLeft,
   Bell,
-  CalendarDays,
   Check,
   CheckCircle2,
   Coins,
@@ -22,11 +21,11 @@ import {
   MapPin,
   MessageCircle,
   MessageSquare,
+  MoreHorizontal,
   Package,
   Plus,
   RefreshCw,
   Search,
-  Send,
   ShieldCheck,
   Store as StoreIcon,
   X,
@@ -46,6 +45,53 @@ const EMPTY_FORM = {
   maxProducts: 20,
   durationMonths: 12,
 };
+
+const FOCUS =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ledger-green/50 focus-visible:ring-offset-2 focus-visible:ring-offset-ledger-paper';
+
+const FIELD =
+  'w-full min-h-11 rounded-md border border-ledger-line bg-white px-3 text-sm text-ledger-ink outline-none transition-colors focus:border-ledger-green focus:ring-2 focus:ring-ledger-green/15';
+
+const LABEL = 'block text-sm font-medium text-ledger-ink mb-1.5';
+
+type StoreStatus = 'active' | 'expired' | 'suspended';
+type StatusFilter = 'all' | 'active' | 'expiring' | 'suspended';
+
+interface ConfirmRequest {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone: 'green' | 'red' | 'brass';
+  onConfirm: () => void;
+}
+
+function daysUntil(dateString?: string | null): number {
+  if (!dateString) return 0;
+  const target = new Date(dateString).getTime();
+  if (Number.isNaN(target)) return 0;
+  return Math.ceil((target - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
+function getStoreStatus(store: Store): StoreStatus {
+  if (!store.is_active) return 'suspended';
+  if (new Date(store.expires_at).getTime() <= Date.now()) return 'expired';
+  return 'active';
+}
+
+function shortSerial(store: Store): string {
+  const key = (store.license_key ?? '').replace(/[^a-z0-9]/gi, '');
+  if (key.length >= 4) return key.slice(-4).toUpperCase();
+  const id = store.id.replace(/[^a-z0-9]/gi, '');
+  return id.slice(-4).toUpperCase() || '0000';
+}
+
+function todayLabel(): string {
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date());
+}
 
 async function copyText(text: string, successMessage: string) {
   try {
@@ -71,14 +117,14 @@ function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: str
   const lines = [
     `Bonjour, votre vitrine ${store.name} est activée sur VitrineExpress.`,
     '',
-    `• Vitrine publique : ${window.location.origin}/boutique/${store.slug}`,
-    `• Espace de gestion : ${window.location.origin}/merchant`,
+    `Vitrine publique : ${window.location.origin}/boutique/${store.slug}`,
+    `Espace de gestion : ${window.location.origin}/merchant`,
     '',
     'Identifiants d\'accès commerçant :',
-    `• Nom de la boutique : ${store.name}`,
-    `• Numéro WhatsApp : ${store.whatsapp_number}`,
+    `Nom de la boutique : ${store.name}`,
+    `Numéro WhatsApp : ${store.whatsapp_number}`,
   ];
-  if (pinCode) lines.push(`• Code PIN secret : ${pinCode}`);
+  if (pinCode) lines.push(`Code PIN secret : ${pinCode}`);
   lines.push(
     '',
     `Quota souscrit : jusqu'à ${store.max_products} articles`,
@@ -94,6 +140,49 @@ function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: str
   return lines.join('\n');
 }
 
+const StatusStamp: React.FC<{ status: StoreStatus }> = ({ status }) => {
+  const map: Record<StoreStatus, { label: string; className: string }> = {
+    active: { label: 'Actif', className: 'border-ledger-green/40 bg-ledger-green-soft text-ledger-green' },
+    expired: { label: 'Expiré', className: 'border-ledger-red/40 bg-ledger-red-soft text-ledger-red' },
+    suspended: { label: 'Suspendu', className: 'border-ledger-line bg-ledger-paper text-ledger-muted' },
+  };
+  const { label, className } = map[status];
+  return (
+    <span className={`inline-flex items-center border px-2 py-0.5 text-[11px] font-semibold tracking-wide ${className}`}>
+      {label}
+    </span>
+  );
+};
+
+const ExpiryMeter: React.FC<{ expiresAt: string }> = ({ expiresAt }) => {
+  const days = daysUntil(expiresAt);
+  const width = Math.max(0, Math.min(100, (days / 365) * 100));
+  const tone = days <= 0 ? 'bg-ledger-red' : days < 30 ? 'bg-ledger-brass' : 'bg-ledger-green';
+  return (
+    <div
+      className="mt-2 h-1.5 w-full bg-ledger-line/70"
+      role="img"
+      aria-label={days > 0 ? `${days} jours restants` : 'Licence échue'}
+    >
+      <div className={`h-full ${tone}`} style={{ width: `${width}%` }} />
+    </div>
+  );
+};
+
+const QuotaMeter: React.FC<{ current: number; max: number }> = ({ current, max }) => {
+  const ratio = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
+  const tone = current >= max ? 'bg-ledger-red' : current / Math.max(max, 1) >= 0.8 ? 'bg-ledger-brass' : 'bg-ledger-green';
+  return (
+    <div
+      className="mt-2 h-1.5 w-full bg-ledger-line/70"
+      role="img"
+      aria-label={`${current} articles sur ${max}`}
+    >
+      <div className={`h-full ${tone}`} style={{ width: `${ratio}%` }} />
+    </div>
+  );
+};
+
 export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   onSelectStore,
   onBackToHome,
@@ -108,7 +197,9 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [actionId, setActionId] = useState<string | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -116,6 +207,10 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   const [createdAccess, setCreatedAccess] = useState<CreatedStoreAccess | null>(null);
   const [pdfTarget, setPdfTarget] = useState<Store | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
+  const [quotaTarget, setQuotaTarget] = useState<Store | null>(null);
+  const [quotaValue, setQuotaValue] = useState('20');
 
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [notifTargetStoreId, setNotifTargetStoreId] = useState<string>('');
@@ -143,7 +238,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       });
 
       if (result.success) {
-        toast.success(notifTargetStoreId ? 'Notification ciblée envoyée !' : 'Notification générale diffusée à toutes les boutiques !');
+        toast.success(notifTargetStoreId ? 'Notification ciblée envoyée' : 'Notification diffusée à toutes les boutiques');
         setIsNotifModalOpen(false);
         setNotifTitle('');
         setNotifMessage('');
@@ -192,7 +287,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       setStores(result.stores ?? []);
       setIsAuthenticated(true);
       setAdminKeyInput('');
-      toast.success('Administration déverrouillée');
+      toast.success('Registre déverrouillé');
     } finally {
       setIsLoggingIn(false);
     }
@@ -244,10 +339,6 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
 
   const handleToggleStatus = async (store: Store) => {
     const isActive = Boolean(store.is_active);
-    if (isActive && !window.confirm(`Suspendre temporairement la vitrine ${store.name} ?`)) {
-      return;
-    }
-
     setActionId(store.id);
     try {
       const result = await dbService.toggleStoreStatus(store.id);
@@ -264,10 +355,6 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   };
 
   const handleRenew = async (store: Store) => {
-    if (!window.confirm(`Prolonger la licence de ${store.name} de 12 mois (5 000 FCFA) ?`)) {
-      return;
-    }
-
     setActionId(store.id);
     try {
       const result = await dbService.renewStoreLicense(store.id, 12);
@@ -283,20 +370,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     }
   };
 
-  const handleUpdateQuota = async (store: Store) => {
-    const currentQuota = store.max_products || 20;
-    const input = window.prompt(
-      `Nouveau quota d'articles pour ${store.name} (actuellement : ${currentQuota} articles) :`,
-      String(currentQuota),
-    );
-    if (!input) return;
-
-    const newQuota = parseInt(input.trim(), 10);
-    if (isNaN(newQuota) || newQuota < 1 || newQuota > 500) {
-      toast.error('Veuillez entrer un nombre valide entre 1 et 500 articles');
-      return;
-    }
-
+  const handleUpdateQuota = async (store: Store, newQuota: number) => {
     setActionId(store.id);
     try {
       const result = await dbService.updateStoreQuota(store.id, newQuota);
@@ -313,10 +387,6 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   };
 
   const handleResetPin = async (store: Store) => {
-    if (!window.confirm(`Générer un nouveau PIN pour ${store.name} ? L'ancien PIN ne fonctionnera plus.`)) {
-      return;
-    }
-
     setActionId(store.id);
     try {
       const result = await dbService.resetStorePin(store.id);
@@ -413,90 +483,162 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     }
   };
 
+  const requestRenew = (store: Store) => {
+    setMenuOpenId(null);
+    setConfirmRequest({
+      title: 'Prolonger la licence ?',
+      message: `${store.name} sera prolongée de 12 mois (5 000 FCFA).`,
+      confirmLabel: 'Prolonger de 12 mois',
+      tone: 'brass',
+      onConfirm: () => void handleRenew(store),
+    });
+  };
+
+  const requestToggleStatus = (store: Store) => {
+    const isActive = Boolean(store.is_active);
+    setMenuOpenId(null);
+    setConfirmRequest({
+      title: isActive ? 'Suspendre cette vitrine ?' : 'Réactiver cette vitrine ?',
+      message: isActive
+        ? `${store.name} ne sera plus accessible publiquement jusqu'à réactivation.`
+        : `${store.name} redeviendra accessible publiquement.`,
+      confirmLabel: isActive ? 'Suspendre' : 'Réactiver',
+      tone: isActive ? 'red' : 'green',
+      onConfirm: () => void handleToggleStatus(store),
+    });
+  };
+
+  const requestResetPin = (store: Store) => {
+    setMenuOpenId(null);
+    setConfirmRequest({
+      title: 'Générer un nouveau PIN ?',
+      message: `L'ancien PIN de ${store.name} ne fonctionnera plus. Le nouveau PIN s'affichera une seule fois.`,
+      confirmLabel: 'Générer le PIN',
+      tone: 'red',
+      onConfirm: () => void handleResetPin(store),
+    });
+  };
+
+  const openQuotaDialog = (store: Store) => {
+    setMenuOpenId(null);
+    setQuotaTarget(store);
+    setQuotaValue(String(store.max_products || 20));
+  };
+
+  const submitQuota = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!quotaTarget) return;
+    const newQuota = parseInt(quotaValue.trim(), 10);
+    if (Number.isNaN(newQuota) || newQuota < 1 || newQuota > 500) {
+      toast.error('Veuillez entrer un nombre valide entre 1 et 500 articles');
+      return;
+    }
+    const target = quotaTarget;
+    setQuotaTarget(null);
+    void handleUpdateQuota(target, newQuota);
+  };
+
   const filteredStores = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return stores;
-    return stores.filter((store) =>
-      store.name.toLowerCase().includes(query) ||
-      store.city.toLowerCase().includes(query) ||
-      store.slug.toLowerCase().includes(query),
-    );
-  }, [searchQuery, stores]);
+    return stores.filter((store) => {
+      const days = daysUntil(store.expires_at);
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'suspended' && !store.is_active) ||
+        (statusFilter === 'expiring' && Boolean(store.is_active) && days < 30) ||
+        (statusFilter === 'active' && Boolean(store.is_active) && days >= 30);
+      if (!matchesStatus) return false;
+      if (!query) return true;
+      return (
+        store.name.toLowerCase().includes(query) ||
+        store.city.toLowerCase().includes(query) ||
+        store.slug.toLowerCase().includes(query)
+      );
+    });
+  }, [searchQuery, statusFilter, stores]);
 
-  const activeStoresCount = stores.filter((store) => Boolean(store.is_active)).length;
-  const expiredStoresCount = stores.filter(
-    (store) => new Date(store.expires_at).getTime() <= Date.now(),
-  ).length;
-  const estimatedRevenue = stores.reduce(
-    (total, store) => total + (Number(store.price_paid) || 5000),
-    0,
-  );
+  const enRegleCount = stores.filter((store) => Boolean(store.is_active) && daysUntil(store.expires_at) >= 30).length;
+  const aEcheanceCount = stores.filter((store) => Boolean(store.is_active) && daysUntil(store.expires_at) < 30).length;
+  const suspenduesCount = stores.filter((store) => !store.is_active).length;
+  const recordedRevenue = stores.reduce((total, store) => total + (Number(store.price_paid) || 0), 0);
+  const hasActiveFilter = statusFilter !== 'all' || searchQuery.trim().length > 0;
+
+  const segments: { key: StatusFilter; label: string; count: number }[] = [
+    { key: 'active', label: 'En règle', count: enRegleCount },
+    { key: 'expiring', label: 'À échéance', count: aEcheanceCount },
+    { key: 'suspended', label: 'Suspendues', count: suspenduesCount },
+  ];
 
   if (!isAuthenticated) {
     return (
-      <div className="flex-1 min-h-[calc(100vh-3.5rem)] bg-warm-50 flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-sm">
+      <div className="flex-1 min-h-[calc(100vh-3.5rem)] bg-ledger-paper font-ledger text-ledger-ink flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
           <button
             onClick={onBackToHome}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-500 hover:text-ink-950 transition-colors mb-6 cursor-pointer"
+            className={`inline-flex items-center gap-1.5 text-sm text-ledger-muted hover:text-ledger-ink transition-colors mb-6 cursor-pointer ${FOCUS}`}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-4 h-4" />
             Retour à l'accueil
           </button>
 
-          <div className="bg-white rounded-3xl border border-ink-100 shadow-elevated p-7 sm:p-8">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center mb-5">
-              <ShieldCheck className="w-6 h-6" />
+          <div className="border border-ledger-line bg-ledger-surface">
+            <div className="border-b border-ledger-line px-6 py-6">
+              <div className="flex items-center gap-2 text-ledger-green">
+                <ShieldCheck className="w-5 h-5" />
+                <span className="text-sm font-medium">Administration</span>
+              </div>
+              <h1 className="font-registry font-semibold text-3xl tracking-tight mt-3">
+                Registre des licences
+              </h1>
+              <p className="text-sm text-ledger-muted mt-1.5 leading-relaxed">
+                Espace d'administration VitrineExpress. Saisissez la clé configurée sur le serveur
+                pour gérer les boutiques et les échéances.
+              </p>
             </div>
 
-            <h1 className="font-display font-bold text-2xl text-ink-950 tracking-tight">
-              Administration
-            </h1>
-            <p className="text-xs text-ink-500 mt-1.5 leading-relaxed">
-              Cet espace est réservé à Karis. Saisissez la clé administrateur configurée
-              sur le serveur pour gérer les boutiques et les licences.
-            </p>
-
-            <form onSubmit={handleLogin} className="mt-6 space-y-3">
-              <div className="relative">
-                <KeyRound className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showAdminKey ? 'text' : 'password'}
-                  value={adminKeyInput}
-                  onChange={(event) => setAdminKeyInput(event.target.value)}
-                  placeholder="Clé administrateur"
-                  autoComplete="current-password"
-                  autoFocus
-                  className="w-full pl-10 pr-11 py-3 rounded-xl border border-ink-200 text-sm text-ink-950 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowAdminKey((visible) => !visible)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-400 hover:text-ink-700 cursor-pointer"
-                  aria-label={showAdminKey ? 'Masquer la clé' : 'Afficher la clé'}
-                >
-                  {showAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            <form onSubmit={handleLogin} className="px-6 py-6 space-y-4">
+              <div>
+                <label htmlFor="admin-key" className={LABEL}>
+                  Clé administrateur
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-ledger-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    id="admin-key"
+                    type={showAdminKey ? 'text' : 'password'}
+                    value={adminKeyInput}
+                    onChange={(event) => setAdminKeyInput(event.target.value)}
+                    placeholder="Saisir la clé"
+                    autoComplete="current-password"
+                    autoFocus
+                    className={`${FIELD} pl-10 pr-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminKey((visible) => !visible)}
+                    className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 inline-flex items-center justify-center rounded-md text-ledger-muted hover:text-ledger-ink hover:bg-ledger-paper cursor-pointer ${FOCUS}`}
+                    aria-label={showAdminKey ? 'Masquer la clé' : 'Afficher la clé'}
+                  >
+                    {showAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-0.5">
+              <div className="flex items-center gap-2.5">
                 <input
                   type="checkbox"
                   id="remember-admin"
                   checked={rememberDevice}
                   onChange={(e) => setRememberDevice(e.target.checked)}
-                  className="w-4 h-4 rounded border-ink-300 text-amber-500 focus:ring-amber-400 accent-amber-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-ledger-line text-ledger-green focus:ring-ledger-green/40 accent-ledger-green cursor-pointer"
                 />
-                <label
-                  htmlFor="remember-admin"
-                  className="text-xs text-ink-600 select-none cursor-pointer"
-                >
-                  Mémoriser sur cet appareil (rester connecté)
+                <label htmlFor="remember-admin" className="text-sm text-ledger-muted select-none cursor-pointer">
+                  Rester connecté sur cet appareil
                 </label>
               </div>
 
               {error && (
-                <div className="px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 leading-relaxed">
+                <div className="px-3.5 py-2.5 rounded-md bg-ledger-red-soft border border-ledger-red/30 text-sm text-ledger-red leading-relaxed">
                   {error}
                 </div>
               )}
@@ -504,7 +646,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
               <button
                 type="submit"
                 disabled={isLoggingIn || !adminKeyInput.trim()}
-                className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-ink-950 text-sm font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                className={`w-full inline-flex items-center justify-center gap-2 min-h-11 rounded-md bg-ledger-green text-white text-sm font-semibold transition-colors hover:bg-ledger-green/90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${FOCUS}`}
               >
                 {isLoggingIn ? (
                   <>
@@ -512,330 +654,354 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                     Vérification...
                   </>
                 ) : (
-                  'Déverrouiller'
+                  'Déverrouiller le registre'
                 )}
               </button>
             </form>
           </div>
+
+          <p className="mt-4 text-xs text-ledger-muted text-center">
+            Accès réservé à l'équipe VitrineExpress.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 bg-warm-50 py-6 sm:py-8 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto space-y-5">
-        <div className="flex items-center justify-between gap-3">
+    <div className="flex-1 bg-ledger-paper font-ledger text-ledger-ink">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex items-center justify-between gap-3 text-sm text-ledger-muted">
           <button
             onClick={onBackToHome}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-500 hover:text-ink-950 transition-colors cursor-pointer"
+            className={`inline-flex items-center gap-1.5 hover:text-ledger-ink transition-colors cursor-pointer ${FOCUS}`}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Retour à l'accueil
+            <ArrowLeft className="w-4 h-4" />
+            <span className="whitespace-nowrap">Retour à l'accueil</span>
           </button>
-          <button
-            onClick={handleLogout}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-ink-600 hover:text-ink-950 hover:bg-warm-100 border border-ink-200 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Verrouiller
-          </button>
-        </div>
-
-        <div className="bg-ink-950 text-white rounded-3xl p-6 sm:p-8 border border-ink-800 shadow-elevated flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative">
-          <div className="absolute -top-20 -right-16 w-64 h-64 rounded-full bg-amber-400/10 blur-3xl" />
-          <div className="relative">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25 text-[11px] font-semibold mb-3">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Karis · Licence Manager
-            </div>
-            <h1 className="font-display font-bold text-2xl sm:text-3xl tracking-tight">
-              Boutiques et licences
-            </h1>
-            <p className="text-xs sm:text-sm text-white/45 mt-1.5 max-w-lg leading-relaxed">
-              Créez les vitrines de vos clients, transmettez leurs accès et gardez le
-              contrôle sur les échéances et les quotas.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-4">
+            <span className="font-registry text-base text-ledger-ink whitespace-nowrap">{todayLabel()}</span>
             <button
-              onClick={() => setIsNotifModalOpen(true)}
-              className="relative inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs border border-white/20 transition-colors shadow-sm cursor-pointer shrink-0"
+              onClick={handleLogout}
+              className={`inline-flex items-center gap-1.5 hover:text-ledger-ink transition-colors cursor-pointer ${FOCUS}`}
             >
-              <Bell className="w-4 h-4 text-amber-300" />
-              Diffuser une notification
-            </button>
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="relative inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-ink-950 font-bold text-sm transition-colors shadow-sm cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              Créer une boutique
+              <LogOut className="w-4 h-4" />
+              <span className="whitespace-nowrap">Verrouiller</span>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          <div className="bg-white rounded-2xl p-4 border border-ink-100 shadow-subtle flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
-              <StoreIcon className="w-5 h-5" />
-            </div>
+        <header className="mt-4 border-b-2 border-ledger-ink pb-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block">
-                Boutiques
-              </span>
-              <span className="font-display font-bold text-xl text-ink-950">{stores.length}</span>
+              <h1 className="font-registry font-semibold text-3xl sm:text-4xl tracking-tight">
+                Registre des licences
+              </h1>
+              <p className="text-sm text-ledger-muted mt-1.5 max-w-md leading-relaxed">
+                Créez les vitrines, transmettez les accès et suivez les échéances.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsNotifModalOpen(true)}
+                className={`inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-ledger-line bg-ledger-surface text-sm font-medium text-ledger-ink transition-colors hover:bg-ledger-paper cursor-pointer ${FOCUS}`}
+              >
+                <Bell className="w-4 h-4 text-ledger-brass" />
+                Diffuser une notification
+              </button>
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className={`inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md bg-ledger-green text-white text-sm font-semibold transition-colors hover:bg-ledger-green/90 cursor-pointer ${FOCUS}`}
+              >
+                <Plus className="w-4 h-4" />
+                Créer une boutique
+              </button>
             </div>
           </div>
+        </header>
 
-          <div className="bg-white rounded-2xl p-4 border border-ink-100 shadow-subtle flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block">
-                Actives
-              </span>
-              <span className="font-display font-bold text-xl text-ink-950">{activeStoresCount}</span>
-            </div>
+        <div className="grid grid-cols-3 border-b border-ledger-line">
+          {segments.map((segment, index) => {
+            const isActive = statusFilter === segment.key;
+            return (
+              <button
+                key={segment.key}
+                onClick={() => setStatusFilter((current) => current === segment.key ? 'all' : segment.key)}
+                aria-pressed={isActive}
+                className={`text-left py-4 sm:px-5 transition-colors cursor-pointer ${index > 0 ? 'border-l border-ledger-line pl-4 sm:pl-5' : 'pr-4 sm:pr-5'} ${isActive ? 'bg-ledger-surface' : 'hover:bg-ledger-surface/60'} ${FOCUS}`}
+              >
+                <span className="block font-registry text-2xl sm:text-3xl leading-none tabular-nums">
+                  {segment.count}
+                </span>
+                <span className="block text-xs sm:text-sm text-ledger-muted mt-1.5">{segment.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between py-3 text-xs text-ledger-muted border-b border-ledger-line">
+          <span>
+            {filteredStores.length} boutique{filteredStores.length > 1 ? 's' : ''} affichée{filteredStores.length > 1 ? 's' : ''}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Coins className="w-3.5 h-3.5 text-ledger-brass" />
+            Montants enregistrés :
+            <span className="text-ledger-ink font-medium tabular-nums">
+              {recordedRevenue > 0 ? formatFCFA(recordedRevenue) : '—'}
+            </span>
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 py-4">
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-ledger-muted absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Nom, ville ou identifiant"
+              className={`${FIELD} pl-9`}
+            />
           </div>
-
-          <div className="bg-white rounded-2xl p-4 border border-ink-100 shadow-subtle flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-red-50 text-red-700 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block">
-                Échéances dépassées
-              </span>
-              <span className="font-display font-bold text-xl text-ink-950">{expiredStoresCount}</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 border border-ink-100 shadow-subtle flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
-              <Coins className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block">
-                Licences encaissées
-              </span>
-              <span className="font-display font-bold text-lg text-ink-950">
-                {formatFCFA(estimatedRevenue)}
-              </span>
-            </div>
+          <div className="flex items-center gap-2">
+            {hasActiveFilter && (
+              <button
+                onClick={() => {
+                  setStatusFilter('all');
+                  setSearchQuery('');
+                }}
+                className={`min-h-11 px-3 text-sm text-ledger-muted hover:text-ledger-ink transition-colors cursor-pointer ${FOCUS}`}
+              >
+                Effacer
+              </button>
+            )}
+            <button
+              onClick={() => void loadStores()}
+              disabled={isLoading}
+              className={`h-11 w-11 inline-flex items-center justify-center rounded-md border border-ledger-line bg-ledger-surface text-ledger-muted hover:text-ledger-ink hover:bg-ledger-paper transition-colors disabled:opacity-50 cursor-pointer ${FOCUS}`}
+              title="Rafraîchir"
+              aria-label="Rafraîchir la liste"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
 
         {error && (
-          <div className="flex items-start justify-between gap-3 p-4 rounded-2xl bg-red-50 border border-red-200">
-            <div className="flex items-start gap-2.5 text-xs text-red-800">
+          <div className="mb-4 flex items-start justify-between gap-3 p-4 rounded-md bg-ledger-red-soft border border-ledger-red/30">
+            <div className="flex items-start gap-2.5 text-sm text-ledger-red">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
             <button
               onClick={() => void loadStores()}
-              className="text-[11px] font-semibold text-red-800 hover:text-red-950 underline underline-offset-2 cursor-pointer shrink-0"
+              className={`text-sm font-semibold text-ledger-red hover:opacity-80 underline underline-offset-2 cursor-pointer shrink-0 ${FOCUS}`}
             >
               Réessayer
             </button>
           </div>
         )}
 
-        <div className="bg-white rounded-3xl border border-ink-100 shadow-subtle overflow-hidden">
-          <div className="p-4 sm:p-5 border-b border-ink-100 bg-warm-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display font-bold text-lg text-ink-950">
-                Boutiques souscrites
-              </h2>
-              <p className="text-xs text-ink-500 mt-0.5">
-                {filteredStores.length} boutique{filteredStores.length > 1 ? 's' : ''} affichée{filteredStores.length > 1 ? 's' : ''}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Rechercher..."
-                  className="w-full sm:w-52 pl-8 pr-3 py-2 rounded-lg border border-ink-200 text-xs outline-none focus:border-ink-400 bg-white"
-                />
-              </div>
-              <button
-                onClick={() => void loadStores()}
-                disabled={isLoading}
-                className="p-2 rounded-lg border border-ink-200 text-ink-500 hover:text-ink-950 hover:bg-warm-100 transition-colors disabled:opacity-50 cursor-pointer"
-                title="Rafraîchir"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
+        <div className="border border-ledger-line bg-ledger-surface">
+          <div className="hidden lg:grid grid-cols-[minmax(0,1.7fr)_120px_minmax(0,1.35fr)_120px_200px] gap-4 px-5 py-2.5 border-b border-ledger-line text-xs text-ledger-muted">
+            <span>Boutique</span>
+            <span>Statut</span>
+            <span>Échéance</span>
+            <span>Quota</span>
+            <span className="text-right">Actions</span>
           </div>
 
           {isLoading && stores.length === 0 ? (
-            <div className="p-10 flex flex-col items-center justify-center">
-              <div className="w-8 h-8 border-[3px] border-ink-200 border-t-amber-500 rounded-full animate-spin mb-3" />
-              <span className="text-xs text-ink-500">Chargement des boutiques...</span>
+            <div className="p-12 flex flex-col items-center justify-center">
+              <div className="w-7 h-7 border-2 border-ledger-line border-t-ledger-green rounded-full animate-spin mb-3" />
+              <span className="text-sm text-ledger-muted">Chargement du registre...</span>
             </div>
           ) : filteredStores.length === 0 ? (
-            <div className="p-10 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-warm-100 text-ink-400 flex items-center justify-center mb-3">
-                <StoreIcon className="w-6 h-6" />
+            <div className="p-12 flex flex-col items-center justify-center text-center">
+              <div className="w-11 h-11 border border-ledger-line bg-ledger-paper text-ledger-muted flex items-center justify-center mb-3">
+                <StoreIcon className="w-5 h-5" />
               </div>
-              <p className="text-sm font-semibold text-ink-900">
-                {stores.length === 0 ? 'Aucune boutique pour le moment' : 'Aucun résultat'}
+              <p className="font-registry text-lg text-ledger-ink">
+                {stores.length === 0 ? 'Aucune boutique au registre' : 'Aucun résultat'}
               </p>
-              <p className="text-xs text-ink-500 mt-1 max-w-xs">
+              <p className="text-sm text-ledger-muted mt-1 max-w-xs leading-relaxed">
                 {stores.length === 0
                   ? 'Créez la première vitrine pour démarrer votre activité.'
-                  : 'Essayez avec un autre nom, une ville ou un identifiant.'}
+                  : 'Modifiez la recherche ou retirez le filtre de statut.'}
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-ink-100/80">
+            <div>
               {filteredStores.map((store) => {
-                const isActive = Boolean(store.is_active);
-                const daysLeft = getDaysRemaining(store.expires_at);
-                const isExpired = new Date(store.expires_at).getTime() <= Date.now();
+                const status = getStoreStatus(store);
+                const days = daysUntil(store.expires_at);
+                const currentProducts = store.current_products_count ?? 0;
                 const isBusy = actionId === store.id;
+                const isMenuOpen = menuOpenId === store.id;
 
                 return (
                   <div
                     key={store.id}
-                    className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-warm-50/40 transition-colors"
+                    className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_120px_minmax(0,1.35fr)_120px_200px] gap-4 lg:gap-4 px-4 sm:px-5 py-4 border-b border-ledger-line last:border-b-0 hover:bg-ledger-paper/60 transition-colors"
                   >
-                    <div className="flex items-start gap-3.5 min-w-0">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-white flex items-center justify-center font-display font-bold text-lg shrink-0 overflow-hidden">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-11 h-11 shrink-0 border border-ledger-line bg-ledger-paper flex items-center justify-center overflow-hidden">
                         {store.logo_url ? (
                           <img src={store.logo_url} alt={store.name} className="w-full h-full object-cover" />
                         ) : (
-                          store.name.charAt(0).toUpperCase()
+                          <span className="font-registry font-semibold text-lg text-ledger-ink">
+                            {store.name.charAt(0).toUpperCase()}
+                          </span>
                         )}
                       </div>
 
                       <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-display font-semibold text-sm sm:text-base text-ink-950 truncate">
+                        <div className="flex items-baseline gap-2 min-w-0">
+                          <h2 className="font-registry text-lg leading-tight text-ledger-ink truncate">
                             {store.name}
-                          </h3>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            isActive && !isExpired
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-red-50 text-red-700 border-red-200'
-                          }`}>
-                            {isExpired ? 'Expirée' : isActive ? 'Active' : 'Suspendue'}
+                          </h2>
+                          <span className="font-ledger-mono text-[11px] text-ledger-muted shrink-0">
+                            #{shortSerial(store)}
                           </span>
                         </div>
-
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-ink-500">
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {store.city}{store.quarter ? ` · ${store.quarter}` : ''}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <Package className="w-3 h-3" />
-                            {store.current_products_count ?? 0}/{store.max_products}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <CalendarDays className="w-3 h-3" />
-                            {formatDate(store.expires_at)}
-                            <span className={daysLeft < 30 ? 'text-amber-700 font-semibold' : ''}>
-                              ({daysLeft} j)
-                            </span>
+                        <div className="flex items-center gap-1 text-xs text-ledger-muted mt-0.5">
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          <span className="truncate">
+                            {store.city}{store.quarter ? `, ${store.quarter}` : ''}
                           </span>
                         </div>
-
-                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                          <button
-                            onClick={() => void copyText(store.license_key ?? '', 'Clé de licence copiée')}
-                            className="font-mono text-[10px] bg-warm-100 hover:bg-warm-200 text-ink-700 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
-                            title="Copier la clé de licence"
-                          >
-                            {store.license_key ?? 'Clé non disponible'}
-                          </button>
-                          <span className="inline-flex items-center gap-1 font-mono text-[10px] bg-warm-100 text-ink-700 px-1.5 py-0.5 rounded">
-                            <KeyRound className="w-2.5 h-2.5" />
-                            PIN sécurisé
-                          </span>
-                        </div>
+                        <button
+                          onClick={() => void copyText(store.license_key ?? '', 'Clé de licence copiée')}
+                          className={`mt-1.5 inline-flex items-center gap-1 font-ledger-mono text-[11px] text-ledger-muted hover:text-ledger-ink transition-colors cursor-pointer ${FOCUS}`}
+                          title="Copier la clé de licence"
+                        >
+                          <Copy className="w-3 h-3" />
+                          {store.license_key ?? 'Sans clé'}
+                        </button>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 lg:justify-end shrink-0">
-                      <button
-                        onClick={() => onSelectStore(store)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-ink-200 text-ink-700 hover:bg-warm-100 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        Vitrine
-                      </button>
+                    <div className="lg:pt-1">
+                      <StatusStamp status={status} />
+                    </div>
 
-                      <button
-                        onClick={() => void copyText(
-                          buildOnboardingMessage(store),
-                          'Message d’accueil copié',
-                        )}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-ink-200 text-ink-700 hover:bg-warm-100 text-xs font-semibold transition-colors cursor-pointer"
-                        title="Copier le lien et la clé (le PIN n'est plus réaffiché)"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                        Accès
-                      </button>
+                    <div className="lg:pt-0.5">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-ledger-mono text-sm tabular-nums text-ledger-ink">
+                          {formatDate(store.expires_at)}
+                        </span>
+                        <span className={`text-xs tabular-nums ${days <= 0 ? 'text-ledger-red font-medium' : days < 30 ? 'text-ledger-brass font-medium' : 'text-ledger-muted'}`}>
+                          {days > 0 ? `${days} j` : 'Échu'}
+                        </span>
+                      </div>
+                      <ExpiryMeter expiresAt={store.expires_at} />
+                    </div>
 
-                      <button
-                        onClick={() => setPdfTarget(store)}
-                        disabled={isBusy || !store.license_key}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-ink-200 text-ink-700 hover:bg-warm-100 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                        title="Générer la fiche d'accès PDF"
-                      >
-                        <FileDown className="w-3.5 h-3.5 text-brand-600" />
-                        PDF
-                      </button>
+                    <div className="lg:pt-0.5">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-ledger-mono text-sm tabular-nums text-ledger-ink">
+                          {currentProducts} / {store.max_products}
+                        </span>
+                      </div>
+                      <QuotaMeter current={currentProducts} max={store.max_products} />
+                    </div>
 
+                    <div className="flex items-center gap-2 lg:justify-end">
                       <button
-                        onClick={() => void handleRenew(store)}
+                        onClick={() => requestRenew(store)}
                         disabled={isBusy}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                        className={`inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-md border border-ledger-brass/60 bg-ledger-brass-soft/40 text-ledger-brass text-sm font-semibold transition-colors hover:bg-ledger-brass-soft disabled:opacity-50 cursor-pointer ${FOCUS}`}
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${isBusy ? 'animate-spin' : ''}`} />
-                        +1 an
+                        Renouveler
                       </button>
 
-                      <button
-                        onClick={() => void handleUpdateQuota(store)}
-                        disabled={isBusy}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                        title="Modifier le quota d'articles (upgrades)"
-                      >
-                        <Package className="w-3.5 h-3.5" />
-                        Quota
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setMenuOpenId(isMenuOpen ? null : store.id)}
+                          aria-haspopup="menu"
+                          aria-expanded={isMenuOpen}
+                          aria-label={`Autres actions pour ${store.name}`}
+                          className={`h-11 w-11 inline-flex items-center justify-center rounded-md border border-ledger-line text-ledger-muted hover:text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
 
-                      <button
-                        onClick={() => void handleResetPin(store)}
-                        disabled={isBusy}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-ink-200 text-ink-700 hover:bg-warm-100 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                        title="Générer un nouveau PIN"
-                      >
-                        <KeyRound className="w-3.5 h-3.5" />
-                        PIN
-                      </button>
-
-                      <button
-                        onClick={() => void handleToggleStatus(store)}
-                        disabled={isBusy}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors disabled:opacity-50 cursor-pointer ${
-                          isActive
-                            ? 'border-red-200 text-red-700 hover:bg-red-50'
-                            : 'border-emerald-200 text-emerald-800 hover:bg-emerald-50'
-                        }`}
-                      >
-                        {isActive ? 'Suspendre' : 'Réactiver'}
-                      </button>
+                        {isMenuOpen && (
+                          <>
+                            <div className="fixed inset-0 z-30" onClick={() => setMenuOpenId(null)} />
+                            <div
+                              role="menu"
+                              className="absolute right-0 top-full mt-1 z-40 w-60 rounded-md border border-ledger-line bg-ledger-surface py-1 shadow-lg"
+                            >
+                              <button
+                                role="menuitem"
+                                onClick={() => {
+                                  setMenuOpenId(null);
+                                  onSelectStore(store);
+                                }}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 min-h-10 text-sm text-left text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+                              >
+                                <StoreIcon className="w-4 h-4 text-ledger-muted" />
+                                Voir la vitrine
+                              </button>
+                              <button
+                                role="menuitem"
+                                onClick={() => {
+                                  setMenuOpenId(null);
+                                  void copyText(buildOnboardingMessage(store), 'Message d’accueil copié');
+                                }}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 min-h-10 text-sm text-left text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+                                title="Copier le lien et la clé (le PIN n'est plus réaffiché)"
+                              >
+                                <MessageSquare className="w-4 h-4 text-ledger-green" />
+                                Copier les accès
+                              </button>
+                              <button
+                                role="menuitem"
+                                onClick={() => {
+                                  setMenuOpenId(null);
+                                  setPdfTarget(store);
+                                }}
+                                disabled={!store.license_key}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 min-h-10 text-sm text-left text-ledger-ink hover:bg-ledger-paper transition-colors disabled:opacity-50 cursor-pointer ${FOCUS}`}
+                              >
+                                <FileDown className="w-4 h-4 text-ledger-muted" />
+                                Fiche d'accès PDF
+                              </button>
+                              <button
+                                role="menuitem"
+                                onClick={() => openQuotaDialog(store)}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 min-h-10 text-sm text-left text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+                              >
+                                <Package className="w-4 h-4 text-ledger-muted" />
+                                Modifier le quota
+                              </button>
+                              <button
+                                role="menuitem"
+                                onClick={() => requestResetPin(store)}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 min-h-10 text-sm text-left text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+                              >
+                                <KeyRound className="w-4 h-4 text-ledger-muted" />
+                                Générer un nouveau PIN
+                              </button>
+                              <div className="my-1 border-t border-ledger-line" />
+                              <button
+                                role="menuitem"
+                                onClick={() => requestToggleStatus(store)}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 min-h-10 text-sm text-left transition-colors cursor-pointer hover:bg-ledger-paper ${Boolean(store.is_active) ? 'text-ledger-red' : 'text-ledger-green'} ${FOCUS}`}
+                              >
+                                {Boolean(store.is_active) ? (
+                                  <AlertTriangle className="w-4 h-4" />
+                                ) : (
+                                  <CheckCircle2 className="w-4 h-4" />
+                                )}
+                                {Boolean(store.is_active) ? 'Suspendre la vitrine' : 'Réactiver la vitrine'}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -846,67 +1012,61 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       </div>
 
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div
-            onClick={() => setIsCreateOpen(false)}
-            className="fixed inset-0 bg-ink-950/60 backdrop-blur-xs"
-          />
-          <div className="relative w-full max-w-lg bg-white rounded-3xl border border-ink-100 shadow-elevated overflow-hidden my-auto">
-            <div className="flex items-start justify-between p-5 border-b border-ink-100 bg-warm-50">
+        <div className="fixed inset-0 z-50 flex sm:justify-end">
+          <div className="absolute inset-0 bg-ledger-ink/40" onClick={() => setIsCreateOpen(false)} />
+          <div className="relative flex h-full w-full sm:max-w-md flex-col bg-ledger-surface border-l border-ledger-line">
+            <div className="flex items-start justify-between gap-3 border-b border-ledger-line px-5 py-4">
               <div>
-                <h3 className="font-display font-bold text-lg text-ink-950">
-                  Créer une boutique
-                </h3>
-                <p className="text-xs text-ink-500 mt-0.5">
-                  Une licence annuelle et une catégorie par défaut seront générées.
+                <h2 className="font-registry font-semibold text-xl text-ledger-ink">Créer une boutique</h2>
+                <p className="text-xs text-ledger-muted mt-1">
+                  Une licence annuelle et une catégorie par défaut sont générées.
                 </p>
               </div>
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="p-1.5 rounded-full text-ink-500 hover:text-ink-950 hover:bg-warm-100 cursor-pointer"
+                className={`h-9 w-9 inline-flex items-center justify-center rounded-md text-ledger-muted hover:text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+                aria-label="Fermer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateStore} className="p-5 sm:p-6 space-y-3.5 max-h-[75vh] overflow-y-auto">
+            <form onSubmit={handleCreateStore} className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
               <div>
-                <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                  Nom de la boutique *
-                </label>
+                <label className={LABEL} htmlFor="store-name">Nom de la boutique</label>
                 <input
+                  id="store-name"
                   type="text"
                   value={form.name}
                   onChange={(event) => setForm({ ...form, name: event.target.value })}
-                  placeholder="Ex: Kamer Kicks Akwa"
+                  placeholder="Ex : Kamer Kicks Akwa"
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  className={FIELD}
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                  Numéro WhatsApp *
-                </label>
+                <label className={LABEL} htmlFor="store-whatsapp">Numéro WhatsApp</label>
                 <input
+                  id="store-whatsapp"
                   type="tel"
                   value={form.whatsapp}
                   onChange={(event) => setForm({ ...form, whatsapp: event.target.value })}
                   placeholder="237699000000"
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  className={FIELD}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                    Ville
-                  </label>
+                  <label className={LABEL} htmlFor="store-city">Ville</label>
                   <select
+                    id="store-city"
                     value={form.city}
                     onChange={(event) => setForm({ ...form, city: event.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm outline-none bg-white focus:border-amber-500"
+                    className={FIELD}
                   >
                     <option value="Douala">Douala</option>
                     <option value="Yaoundé">Yaoundé</option>
@@ -918,81 +1078,78 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                    Quartier
-                  </label>
+                  <label className={LABEL} htmlFor="store-quarter">Quartier</label>
                   <input
+                    id="store-quarter"
                     type="text"
                     value={form.quarter}
                     onChange={(event) => setForm({ ...form, quarter: event.target.value })}
-                    placeholder="Ex: Akwa"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-sm outline-none focus:border-amber-500"
+                    placeholder="Ex : Akwa"
+                    className={FIELD}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                    PIN
-                  </label>
+                  <label className={LABEL} htmlFor="store-pin">PIN</label>
                   <input
+                    id="store-pin"
                     type="text"
                     value={form.pin}
                     onChange={(event) => setForm({ ...form, pin: event.target.value })}
                     placeholder="Auto"
                     minLength={4}
                     maxLength={12}
-                    className="w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm font-mono outline-none focus:border-amber-500"
+                    className={`${FIELD} font-ledger-mono`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                    Quota
-                  </label>
+                  <label className={LABEL} htmlFor="store-quota">Quota</label>
                   <input
+                    id="store-quota"
                     type="number"
                     min={1}
                     max={200}
                     value={form.maxProducts}
                     onChange={(event) => setForm({ ...form, maxProducts: Number(event.target.value) })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm outline-none focus:border-amber-500"
+                    className={FIELD}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                    Mois
-                  </label>
+                  <label className={LABEL} htmlFor="store-months">Mois</label>
                   <input
+                    id="store-months"
                     type="number"
                     min={1}
                     max={36}
                     value={form.durationMonths}
                     onChange={(event) => setForm({ ...form, durationMonths: Number(event.target.value) })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-ink-200 text-sm outline-none focus:border-amber-500"
+                    className={FIELD}
                   />
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-warm-50 border border-ink-100 text-[11px] text-ink-500 leading-relaxed">
-                Le lien de la vitrine sera <span className="font-mono text-ink-700">/boutique/identifiant</span>,
+              <div className="p-3 rounded-md bg-ledger-paper border border-ledger-line text-xs text-ledger-muted leading-relaxed">
+                Le lien de la vitrine sera <span className="font-ledger-mono text-ledger-ink">/boutique/identifiant</span>,
                 généré automatiquement à partir du nom.
               </div>
 
-              <div className="pt-2 flex items-center gap-2">
+              </div>
+              <div className="flex items-center gap-2 border-t border-ledger-line px-5 py-4 bg-ledger-surface">
                 <button
                   type="button"
                   onClick={() => setIsCreateOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-ink-200 text-xs font-semibold text-ink-700 hover:bg-warm-100 cursor-pointer"
+                  className={`flex-1 min-h-11 rounded-md border border-ledger-line text-sm font-medium text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-ink-950 text-xs font-bold transition-colors disabled:opacity-60 cursor-pointer"
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 rounded-md bg-ledger-green text-white text-sm font-semibold transition-colors hover:bg-ledger-green/90 disabled:opacity-50 cursor-pointer ${FOCUS}`}
                 >
-                  {isCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Créer la boutique
                 </button>
               </div>
@@ -1002,53 +1159,55 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       )}
 
       {createdAccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="fixed inset-0 bg-ink-950/60 backdrop-blur-xs" />
-          <div className="relative w-full max-w-md bg-white rounded-3xl border border-ink-100 shadow-elevated overflow-hidden my-auto">
-            <div className="p-6 text-center border-b border-ink-100 bg-warm-50">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center mx-auto mb-3">
-                <CheckCircle2 className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-ledger-ink/50" onClick={() => setCreatedAccess(null)} />
+          <div className="relative w-full max-w-md bg-ledger-surface border border-ledger-line my-auto">
+            <div className="border-b border-ledger-line px-6 py-5">
+              <div className="flex items-center justify-between text-[11px] font-ledger-mono text-ledger-muted">
+                <span>Acte d'accès</span>
+                <span>#{shortSerial(createdAccess.store)}</span>
               </div>
-              <h3 className="font-display font-bold text-lg text-ink-950">
+              <h2 className="font-registry font-semibold text-2xl text-ledger-ink mt-2">
                 {createdAccess.store.name} est en ligne
-              </h3>
-              <p className="text-xs text-ink-500 mt-1">
-                Transmettez ces accès au commerçant.
-              </p>
+              </h2>
+              <p className="text-sm text-ledger-muted mt-1">Transmettez ces accès au commerçant.</p>
             </div>
 
-            <div className="p-5 space-y-3">
-              <div className="p-3 rounded-xl bg-warm-50 border border-ink-100">
-                <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block mb-1">
-                  Vitrine client
-                </span>
-                <span className="text-xs font-mono text-ink-800 break-all">
-                  {window.location.origin}/boutique/{createdAccess.store.slug}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-xl bg-warm-50 border border-ink-100">
-                  <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block mb-1">
-                    Clé de licence
-                  </span>
-                  <span className="text-xs font-mono text-ink-800 break-all">
+            <div className="px-6 py-5 space-y-4">
+              <dl className="border-y border-dashed border-ledger-line divide-y divide-dashed divide-ledger-line">
+                <div className="py-2.5">
+                  <dt className="text-sm text-ledger-muted">Vitrine</dt>
+                  <dd className="text-xs font-ledger-mono text-ledger-ink break-all mt-1">
+                    {window.location.origin}/boutique/{createdAccess.store.slug}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-ledger-muted shrink-0">Clé de licence</dt>
+                  <dd className="text-xs font-ledger-mono text-ledger-ink break-all text-right">
                     {createdAccess.licenseKey}
-                  </span>
+                  </dd>
                 </div>
-                <div className="p-3 rounded-xl bg-warm-50 border border-ink-100">
-                  <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block mb-1">
-                    Code PIN
-                  </span>
-                  <span className="text-xs font-mono text-ink-800">
-                    {createdAccess.pinCode}
-                  </span>
+                <div className="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-ledger-muted shrink-0">Code PIN</dt>
+                  <dd className="text-sm font-ledger-mono text-ledger-ink">{createdAccess.pinCode}</dd>
                 </div>
-              </div>
+                <div className="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-ledger-muted shrink-0">Validité</dt>
+                  <dd className="text-xs font-ledger-mono text-ledger-ink">
+                    {formatDate(createdAccess.expiresAt)}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-ledger-muted shrink-0">Quota</dt>
+                  <dd className="text-xs font-ledger-mono text-ledger-ink">
+                    {createdAccess.store.max_products} articles
+                  </dd>
+                </div>
+              </dl>
 
-              <p className="text-[11px] text-ink-500 leading-relaxed">
-                Expiration : {formatDate(createdAccess.expiresAt)} · Quota : {createdAccess.store.max_products} articles.
-                Ces identifiants ne sont plus affichés en clair côté client.
+              <p className="text-xs text-ledger-muted leading-relaxed">
+                Le PIN ne sera plus affiché en clair par la suite. Conservez cette fiche ou transmettez-la
+                immédiatement.
               </p>
 
               <button
@@ -1059,17 +1218,13 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                   createdAccess.expiresAt,
                 )}
                 disabled={isGeneratingPdf}
-                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-ink-950 text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                className={`w-full inline-flex items-center justify-center gap-2 min-h-11 rounded-md bg-ledger-brass text-ledger-ink text-sm font-semibold transition-colors hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${FOCUS}`}
               >
-                {isGeneratingPdf ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <FileDown className="w-3.5 h-3.5" />
-                )}
+                {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
                 Télécharger la fiche PDF
               </button>
 
-              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <a
                   href={`https://wa.me/${createdAccess.store.whatsapp_number.replace(/\D/g, '')}?text=${encodeURIComponent(
                     buildOnboardingMessage(
@@ -1080,9 +1235,9 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 rounded-md bg-ledger-green text-white text-sm font-semibold transition-colors hover:bg-ledger-green/90 cursor-pointer ${FOCUS}`}
                 >
-                  <MessageCircle className="w-3.5 h-3.5" />
+                  <MessageCircle className="w-4 h-4" />
                   Envoyer par WhatsApp
                 </a>
                 <button
@@ -1094,16 +1249,16 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                     ),
                     'Message d’accueil copié',
                   )}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-ink-200 text-xs font-semibold text-ink-700 hover:bg-warm-100 transition-colors cursor-pointer"
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 rounded-md border border-ledger-line text-sm font-medium text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
                 >
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-4 h-4" />
                   Copier les accès
                 </button>
               </div>
 
               <button
                 onClick={() => setCreatedAccess(null)}
-                className="w-full py-2 text-[11px] font-medium text-ink-400 hover:text-ink-700 transition-colors cursor-pointer"
+                className={`w-full min-h-10 text-sm text-ledger-muted hover:text-ledger-ink transition-colors cursor-pointer ${FOCUS}`}
               >
                 Fermer
               </button>
@@ -1113,144 +1268,220 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       )}
 
       {pdfTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div
             onClick={() => {
               if (!isGeneratingPdf) setPdfTarget(null);
             }}
-            className="fixed inset-0 bg-ink-950/60 backdrop-blur-xs"
+            className="fixed inset-0 bg-ledger-ink/50"
           />
-          <div className="relative w-full max-w-md bg-white rounded-3xl border border-ink-100 shadow-elevated overflow-hidden my-auto">
-            <div className="flex items-start justify-between p-5 border-b border-ink-100 bg-warm-50">
+          <div className="relative w-full max-w-md bg-ledger-surface border border-ledger-line my-auto">
+            <div className="flex items-start justify-between gap-3 border-b border-ledger-line px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-md bg-ledger-brass-soft text-ledger-brass border border-ledger-brass/30 flex items-center justify-center shrink-0">
                   <FileDown className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-lg text-ink-950">
-                    Fiche d'accès PDF
-                  </h3>
-                  <p className="text-xs text-ink-500 mt-0.5">
-                    {pdfTarget.name}
-                  </p>
+                  <h2 className="font-registry font-semibold text-xl text-ledger-ink">Fiche d'accès PDF</h2>
+                  <p className="text-xs text-ledger-muted mt-0.5">{pdfTarget.name}</p>
                 </div>
               </div>
               <button
                 onClick={() => setPdfTarget(null)}
                 disabled={isGeneratingPdf}
-                className="p-1.5 rounded-full text-ink-500 hover:text-ink-950 hover:bg-warm-100 cursor-pointer disabled:opacity-50"
+                className={`h-9 w-9 inline-flex items-center justify-center rounded-md text-ledger-muted hover:text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer disabled:opacity-50 ${FOCUS}`}
+                aria-label="Fermer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-3.5">
-              <p className="text-xs text-ink-500 leading-relaxed">
-                Cette fiche contient le lien de la vitrine, la clé de licence, les
-                instructions de gestion et la mention de confidentialité.
+            <div className="px-5 py-5 space-y-4">
+              <p className="text-sm text-ledger-muted leading-relaxed">
+                Cette fiche contient le lien de la vitrine, la clé de licence, les instructions
+                de gestion et la mention de confidentialité.
               </p>
 
-              <div className="p-3 rounded-xl bg-warm-50 border border-ink-100 space-y-2">
-                <div>
-                  <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block">
-                    Lien public
-                  </span>
-                  <span className="text-[11px] font-mono text-ink-800 break-all">
+              <dl className="border-y border-dashed border-ledger-line divide-y divide-dashed divide-ledger-line">
+                <div className="py-2.5">
+                  <dt className="text-sm text-ledger-muted">Lien public</dt>
+                  <dd className="text-xs font-ledger-mono text-ledger-ink break-all mt-1">
                     {window.location.origin}/boutique/{pdfTarget.slug}
-                  </span>
+                  </dd>
                 </div>
-                <div>
-                  <span className="text-[10px] font-semibold text-ink-400 uppercase tracking-wider block">
-                    Clé de licence
-                  </span>
-                  <span className="text-[11px] font-mono text-ink-800 break-all">
+                <div className="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-ledger-muted shrink-0">Clé de licence</dt>
+                  <dd className="text-xs font-ledger-mono text-ledger-ink break-all text-right">
                     {pdfTarget.license_key ?? 'Non disponible'}
-                  </span>
+                  </dd>
                 </div>
-              </div>
+              </dl>
 
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
-                Le PIN actuel n'est jamais réaffiché. Pour l'inclure dans le PDF, un
-                nouveau PIN sera généré et l'ancien ne fonctionnera plus.
+              <div className="p-3 rounded-md bg-ledger-brass-soft border border-ledger-brass/30 text-xs text-ledger-ink leading-relaxed">
+                Le PIN actuel n'est jamais réaffiché. Pour l'inclure dans le PDF, un nouveau PIN
+                sera généré et l'ancien ne fonctionnera plus.
               </div>
 
               <div className="space-y-2 pt-1">
                 <button
                   onClick={() => void handlePdfWithNewPin()}
                   disabled={isGeneratingPdf || !pdfTarget.license_key}
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-ink-950 text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                  className={`w-full inline-flex items-center justify-center gap-2 min-h-11 rounded-md bg-ledger-brass text-ledger-ink text-sm font-semibold transition-colors hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${FOCUS}`}
                 >
-                  {isGeneratingPdf ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <KeyRound className="w-3.5 h-3.5" />
-                  )}
-                  {isGeneratingPdf ? 'Génération...' : 'Nouveau PIN + fiche PDF'}
+                  {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                  {isGeneratingPdf ? 'Génération...' : 'Nouveau PIN et fiche PDF'}
                 </button>
 
                 <button
                   onClick={() => void handlePdfWithoutPin()}
                   disabled={isGeneratingPdf || !pdfTarget.license_key}
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-ink-200 text-xs font-semibold text-ink-700 hover:bg-warm-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                  className={`w-full inline-flex items-center justify-center gap-2 min-h-11 rounded-md border border-ledger-line text-sm font-medium text-ledger-ink hover:bg-ledger-paper transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${FOCUS}`}
                 >
-                  <FileDown className="w-3.5 h-3.5" />
+                  <FileDown className="w-4 h-4" />
                   Télécharger sans PIN
                 </button>
 
                 <button
                   onClick={() => setPdfTarget(null)}
                   disabled={isGeneratingPdf}
-                  className="w-full py-2 text-[11px] font-medium text-ink-400 hover:text-ink-700 transition-colors cursor-pointer disabled:opacity-50"
+                  className={`w-full min-h-10 text-sm text-ledger-muted hover:text-ledger-ink transition-colors cursor-pointer disabled:opacity-50 ${FOCUS}`}
                 >
                   Annuler
                 </button>
               </div>
 
-              <p className="text-[10px] text-ink-400 leading-relaxed text-center">
-                Le PDF se termine par une note « Document confidentiel ».
+              <p className="text-[11px] text-ledger-muted leading-relaxed text-center">
+                Le PDF se termine par une note de confidentialité.
               </p>
             </div>
           </div>
         </div>
       )}
-      {/* Modal d'envoi de notification (Générale ou Ciblée) */}
+
+      {confirmRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ledger-ink/50" onClick={() => setConfirmRequest(null)} />
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="confirm-title"
+            className="relative w-full max-w-sm bg-ledger-surface border border-ledger-line p-6"
+          >
+            <h2 id="confirm-title" className="font-registry font-semibold text-xl text-ledger-ink">
+              {confirmRequest.title}
+            </h2>
+            <p className="text-sm text-ledger-muted mt-2 leading-relaxed">{confirmRequest.message}</p>
+            <div className="flex items-center gap-2 mt-5">
+              <button
+                onClick={() => setConfirmRequest(null)}
+                className={`flex-1 min-h-11 rounded-md border border-ledger-line text-sm font-medium text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => {
+                  confirmRequest.onConfirm();
+                  setConfirmRequest(null);
+                }}
+                className={`flex-1 min-h-11 rounded-md text-sm font-semibold transition-colors hover:brightness-95 cursor-pointer ${FOCUS} ${
+                  confirmRequest.tone === 'red'
+                    ? 'bg-ledger-red text-white'
+                    : confirmRequest.tone === 'green'
+                      ? 'bg-ledger-green text-white'
+                      : 'bg-ledger-brass text-ledger-ink'
+                }`}
+              >
+                {confirmRequest.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {quotaTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ledger-ink/50" onClick={() => setQuotaTarget(null)} />
+          <form
+            onSubmit={submitQuota}
+            className="relative w-full max-w-sm bg-ledger-surface border border-ledger-line p-6"
+          >
+            <h2 className="font-registry font-semibold text-xl text-ledger-ink">Modifier le quota</h2>
+            <p className="text-sm text-ledger-muted mt-2 leading-relaxed">
+              {quotaTarget.name} peut publier jusqu'à {quotaTarget.max_products} articles actuellement.
+            </p>
+            <div className="mt-4">
+              <label htmlFor="quota-input" className={LABEL}>
+                Nouveau quota d'articles
+              </label>
+              <input
+                id="quota-input"
+                type="number"
+                min={1}
+                max={500}
+                value={quotaValue}
+                onChange={(event) => setQuotaValue(event.target.value)}
+                autoFocus
+                className={FIELD}
+              />
+              <p className="text-xs text-ledger-muted mt-1.5">Entre 1 et 500 articles.</p>
+            </div>
+            <div className="flex items-center gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setQuotaTarget(null)}
+                className={`flex-1 min-h-11 rounded-md border border-ledger-line text-sm font-medium text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className={`flex-1 min-h-11 rounded-md bg-ledger-green text-white text-sm font-semibold transition-colors hover:bg-ledger-green/90 cursor-pointer ${FOCUS}`}
+              >
+                Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {isNotifModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full border border-ink-100 shadow-elevated">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
-                  <Bell className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="absolute inset-0 bg-ledger-ink/50" onClick={() => setIsNotifModalOpen(false)} />
+          <div className="relative w-full max-w-lg bg-ledger-surface border border-ledger-line my-auto">
+            <div className="flex items-start justify-between gap-3 border-b border-ledger-line px-5 py-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-md bg-ledger-brass-soft text-ledger-brass flex items-center justify-center shrink-0">
+                  <Bell className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-lg text-ink-950">
+                  <h2 className="font-registry font-semibold text-xl text-ledger-ink">
                     Diffuser une notification
-                  </h3>
-                  <p className="text-xs text-ink-500">
-                    Envoyez un message in-app aux commerçants
+                  </h2>
+                  <p className="text-xs text-ledger-muted mt-0.5">
+                    Envoyez un message in-app aux commerçants.
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsNotifModalOpen(false)}
-                className="p-1 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-warm-100 cursor-pointer"
+                className={`h-9 w-9 inline-flex items-center justify-center rounded-md text-ledger-muted hover:text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+                aria-label="Fermer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSendNotification} className="space-y-3.5">
+            <form onSubmit={handleSendNotification} className="px-5 py-5 space-y-4">
               <div>
-                <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                  Destinataire *
-                </label>
+                <label htmlFor="notif-target" className={LABEL}>Destinataire</label>
                 <select
+                  id="notif-target"
                   value={notifTargetStoreId}
                   onChange={(e) => setNotifTargetStoreId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500"
+                  className={FIELD}
                 >
-                  <option value="">Toutes les boutiques (Diffusion générale)</option>
+                  <option value="">Toutes les boutiques</option>
                   {stores.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.city})
@@ -1261,13 +1492,12 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                    Type *
-                  </label>
+                  <label htmlFor="notif-type" className={LABEL}>Type</label>
                   <select
+                    id="notif-type"
                     value={notifType}
-                    onChange={(e) => setNotifType(e.target.value as any)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500"
+                    onChange={(e) => setNotifType(e.target.value as typeof notifType)}
+                    className={FIELD}
                   >
                     <option value="info">Information</option>
                     <option value="tip">Conseil de vente</option>
@@ -1277,59 +1507,56 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                    Lien optionnel
-                  </label>
+                  <label htmlFor="notif-link" className={LABEL}>Lien optionnel</label>
                   <input
+                    id="notif-link"
                     type="url"
                     placeholder="https://..."
                     value={notifLinkUrl}
                     onChange={(e) => setNotifLinkUrl(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500"
+                    className={FIELD}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                  Titre de la notification *
-                </label>
+                <label htmlFor="notif-title" className={LABEL}>Titre</label>
                 <input
+                  id="notif-title"
                   type="text"
                   required
                   placeholder="Ex : Conseil du weekend pour vos commandes WhatsApp"
                   value={notifTitle}
                   onChange={(e) => setNotifTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500"
+                  className={FIELD}
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-ink-600 uppercase tracking-wider mb-1">
-                  Message *
-                </label>
+                <label htmlFor="notif-message" className={LABEL}>Message</label>
                 <textarea
+                  id="notif-message"
                   required
                   rows={3}
                   placeholder="Rédigez votre message aux commerçants..."
                   value={notifMessage}
                   onChange={(e) => setNotifMessage(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-200 text-xs text-ink-950 outline-none focus:border-amber-500 resize-none"
+                  className={`${FIELD} py-2.5 resize-none`}
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setIsNotifModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-ink-200 text-xs font-semibold text-ink-700 hover:bg-warm-100 cursor-pointer"
+                  className={`flex-1 min-h-11 rounded-md border border-ledger-line text-sm font-medium text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={isSendingNotif}
-                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-ink-950 text-xs font-bold cursor-pointer shadow-xs disabled:opacity-50"
+                  className={`flex-1 min-h-11 rounded-md bg-ledger-green text-white text-sm font-semibold transition-colors hover:bg-ledger-green/90 disabled:opacity-50 cursor-pointer ${FOCUS}`}
                 >
                   {isSendingNotif ? 'Envoi...' : 'Envoyer la notification'}
                 </button>
