@@ -9,16 +9,22 @@ import {
   json,
   limiterKeys,
   MERCHANT_SESSION_COOKIE,
-  RATE_LIMITS,
   rateLimitResponse,
   rateLimitState,
-  recordFailure,
   sessionCookie,
   SESSION_TTLS,
   verifySameOrigin,
   type SecurityEnv,
 } from "../_lib/security";
 import { publicStore } from "../_lib/store";
+import {
+  addMonths,
+  isPromoCode,
+  normalizePlan,
+  planLabel,
+  planPrice,
+  PLANS,
+} from "../_lib/plans";
 
 type Env = SecurityEnv;
 
@@ -76,20 +82,10 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     const pref = contactPreference === "email" ? "email" : "whatsapp";
     const cleanEmail = String(contactEmail ?? "").trim().toLowerCase().slice(0, 100);
     const cleanPin = String(pinCode ?? "").trim();
-    const cleanPlan = ["decouverte", "pro", "premium"].includes(String(selectedPlan).toLowerCase())
-      ? String(selectedPlan).toLowerCase()
-      : "decouverte";
+    const cleanPlan = normalizePlan(selectedPlan);
     const cleanPromo = String(promoCode ?? "").trim().toUpperCase();
-
-    const VALID_PROMO_CODES = ["VIP237", "PROMO10", "EXPRESS", "LANCEMENT", "DOUALA", "YAOUNDE"];
-    const isPromoValid = VALID_PROMO_CODES.includes(cleanPromo);
-
-    let priceDue = 0;
-    if (cleanPlan === "pro") {
-      priceDue = isPromoValid ? 5000 : 8000;
-    } else if (cleanPlan === "premium") {
-      priceDue = isPromoValid ? 14000 : 20000;
-    }
+    const isPromoValid = cleanPlan !== "decouverte" && isPromoCode(cleanPromo);
+    const priceDue = planPrice(cleanPlan, isPromoValid);
 
     // 2. Validations métier
     if (!cleanName || cleanName.length < 2) {
@@ -112,27 +108,25 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
     // 3. Vérifier l'unicité du nom de la boutique (insensible à la casse)
     const existingWithName = await db
-      .prepare(`SELECT id FROM stores WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND is_active = 1`)
+      .prepare(`SELECT id FROM stores WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))`)
       .bind(cleanName)
       .first();
 
     if (existingWithName) {
-      await recordFailure(db, ipKey, RATE_LIMITS.merchantLogin);
       return json({
         error: `Le nom « ${cleanName} » est déjà utilisé par une autre boutique. Choisissez un nom distinct (ex: ${cleanName} Douala ou ${cleanName} Akwa).`,
       }, 409);
     }
 
-    // 4. Vérifier si ce numéro WhatsApp possède déjà une boutique active
+    // 4. Vérifier si ce numéro WhatsApp possède déjà une boutique
     const existingWithPhone = await db
-      .prepare(`SELECT id FROM stores WHERE whatsapp_number = ? AND is_active = 1`)
+      .prepare(`SELECT id FROM stores WHERE whatsapp_number = ?`)
       .bind(cleanWhatsApp)
       .first();
 
     if (existingWithPhone) {
-      await recordFailure(db, ipKey, RATE_LIMITS.merchantLogin);
       return json({
-        error: "Une boutique active est déjà associée à ce numéro WhatsApp. Connectez-vous à votre espace commerçant avec votre PIN.",
+        error: "Une boutique est déjà associée à ce numéro WhatsApp. Connectez-vous à votre espace commerçant avec votre PIN.",
       }, 409);
     }
 
@@ -153,21 +147,20 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       resolvedSlug = `${baseSlug}-${Math.floor(10 + Math.random() * 90)}`;
     }
 
-    // 5. Paramètres du Plan Gratuit / Découverte
-    const FREE_MAX_PRODUCTS = 8;
+    // 5. La boutique démarre sur le quota Découverte jusqu'au règlement de la formule choisie
+    const DISCOVERY_MAX_PRODUCTS = PLANS.decouverte.maxProducts;
     const storeId = `store_${crypto.randomUUID().slice(0, 8)}`;
     const licenseKey = `LIC-FREE-${resolvedSlug.replace(/[^a-z0-9]/g, "").slice(0, 4).toUpperCase() || "BOUT"}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
     const categoryId = `cat_${crypto.randomUUID().slice(0, 8)}`;
 
-    const expiresDate = new Date();
-    expiresDate.setUTCMonth(expiresDate.getUTCMonth() + 12); // 12 mois renouvelables gratuitement
-    const expiresAt = expiresDate.toISOString();
+    const expiresAt = addMonths(new Date(), 12).toISOString();
 
     const pinHash = await hashPin(cleanPin, pepper);
 
-    const contactNotes = `Formule demandée : ${cleanPlan.toUpperCase()} (Dû: ${priceDue} FCFA) | Code promo : ${cleanPromo || "aucun"}${isPromoValid ? " [VALIDE]" : ""} | Contact favori : ${pref} | Email : ${cleanEmail || "N/A"}`;
+    const contactNotes = `Formule demandée : ${planLabel(cleanPlan)} (Dû: ${priceDue} FCFA) | Code promo : ${cleanPromo || "aucun"}${isPromoValid ? " [VALIDE]" : ""} | Contact favori : ${pref} | Email : ${cleanEmail || "N/A"}`;
 
     // 6. Insertion sécurisée en base D1 (avec fallback si colonnes contact_preference pas encore migrées)
+    const paymentStatus = priceDue > 0 ? "due" : "paid";
     try {
       await db.batch([
         db.prepare(`
@@ -187,7 +180,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           cleanQuarter,
           licenseKey,
           pinHash,
-          FREE_MAX_PRODUCTS,
+          DISCOVERY_MAX_PRODUCTS,
           expiresAt,
         ),
         db.prepare(`
@@ -205,10 +198,24 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           storeId,
           cleanName,
           cleanWhatsApp,
-          0, // 0 FCFA pour le plan gratuit
-          FREE_MAX_PRODUCTS,
+          0,
+          DISCOVERY_MAX_PRODUCTS,
           12,
           expiresAt,
+          contactNotes,
+        ),
+        db.prepare(`
+          INSERT INTO license_payments (
+            id, store_id, license_key, plan, months, amount, status, note
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          `pay_${crypto.randomUUID().slice(0, 8)}`,
+          storeId,
+          licenseKey,
+          cleanPlan,
+          12,
+          priceDue,
+          paymentStatus,
           contactNotes,
         ),
       ]);
@@ -231,7 +238,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
             cleanQuarter,
             licenseKey,
             pinHash,
-            FREE_MAX_PRODUCTS,
+            DISCOVERY_MAX_PRODUCTS,
             expiresAt,
           ),
           db.prepare(`
@@ -250,9 +257,23 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
             cleanName,
             cleanWhatsApp,
             0,
-            FREE_MAX_PRODUCTS,
+            DISCOVERY_MAX_PRODUCTS,
             12,
             expiresAt,
+            contactNotes,
+          ),
+          db.prepare(`
+            INSERT INTO license_payments (
+              id, store_id, license_key, plan, months, amount, status, note
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            `pay_${crypto.randomUUID().slice(0, 8)}`,
+            storeId,
+            licenseKey,
+            cleanPlan,
+            12,
+            priceDue,
+            paymentStatus,
             contactNotes,
           ),
         ]);
@@ -260,9 +281,6 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         throw insertErr;
       }
     }
-
-    // Enregistrer tentative réussie pour rate-limit
-    await recordFailure(db, ipKey, RATE_LIMITS.admin); // fenêtre de protection
 
     // 7. Connexion automatique immédiate : création de la session HttpOnly
     const { token } = await createSession(
@@ -283,8 +301,8 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         success: true,
         message:
           cleanPlan === "decouverte"
-            ? "Votre boutique gratuite (8 produits) a été créée avec succès !"
-            : `Votre vitrine a été créée ! Pour activer votre ${cleanPlan === "pro" ? "Plan Pro (30 articles)" : "Plan Premium (illimité)"}, finalisez votre règlement (${priceDue} FCFA).`,
+            ? `Votre boutique gratuite (${DISCOVERY_MAX_PRODUCTS} produits) a été créée avec succès !`
+            : `Votre vitrine a été créée ! Pour activer votre ${planLabel(cleanPlan)} (${PLANS[cleanPlan].maxProducts} articles), finalisez votre règlement (${priceDue} FCFA).`,
         store: {
           ...publicStore(storeCreated),
           current_products_count: 0,

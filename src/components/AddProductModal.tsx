@@ -86,7 +86,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     e.preventDefault();
 
     if (isLimitReached) {
-      toast.error(`Quota atteint : ${currentProductCount}/${maxProducts} produits. Contactez Karis !`);
+      toast.error(`Quota atteint : ${currentProductCount}/${maxProducts} produits. Contactez l'équipe VitrineExpress !`);
       return;
     }
 

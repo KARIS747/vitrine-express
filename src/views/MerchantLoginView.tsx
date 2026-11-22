@@ -209,8 +209,8 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
 
             <p className="text-[11px] text-ink-400 mt-5 leading-relaxed">
               {language === 'fr'
-                ? 'Vos accès sont confidentiels. Si vous les avez perdus, contactez Karis pour les récupérer.'
-                : 'Your credentials are confidential. If you have lost them, contact Karis to recover them.'}
+                ? 'Vos accès sont confidentiels. Si vous les avez perdus, contactez l\'équipe VitrineExpress pour les récupérer.'
+                : 'Your credentials are confidential. If you have lost them, contact the VitrineExpress team to recover them.'}
             </p>
           </div>
         </div>

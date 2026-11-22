@@ -46,7 +46,19 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     const title = String(body.title ?? "").trim().slice(0, 120);
     const message = String(body.message ?? "").trim().slice(0, 1000);
     const type = ["info", "success", "warning", "tip"].includes(body.type) ? body.type : "info";
-    const linkUrl = body.linkUrl ? String(body.linkUrl).trim().slice(0, 300) : null;
+    const rawLinkUrl = body.linkUrl ? String(body.linkUrl).trim().slice(0, 300) : "";
+    let linkUrl: string | null = null;
+    if (rawLinkUrl) {
+      try {
+        const parsed = new URL(rawLinkUrl);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          return json({ error: "Le lien doit utiliser http ou https" }, 400);
+        }
+        linkUrl = parsed.toString();
+      } catch {
+        return json({ error: "Lien invalide" }, 400);
+      }
+    }
 
     if (!title || title.length < 3) {
       return json({ error: "Le titre de la notification doit comporter au moins 3 caractères" }, 400);

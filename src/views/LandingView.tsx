@@ -203,8 +203,8 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
   const waCreateMsg =
     language === 'fr'
-      ? 'Bonjour%20Karis%2C%20je%20souhaite%20cr%C3%A9er%20ma%20vitrine%20en%20ligne%20sur%20VitrineExpress.'
-      : 'Hello%20Karis%2C%20I%20would%20like%20to%20create%20my%20online%20store%20on%20VitrineExpress.';
+      ? 'Bonjour%2C%20je%20souhaite%20cr%C3%A9er%20ma%20vitrine%20en%20ligne%20sur%20VitrineExpress.'
+      : 'Hello%2C%20I%20would%20like%20to%20create%20my%20online%20store%20on%20VitrineExpress.';
 
   const isPending = pendingSlug !== null;
 

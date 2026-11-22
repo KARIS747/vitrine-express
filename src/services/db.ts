@@ -1,4 +1,5 @@
 import { Store, Product, Category, InAppNotification } from '../types';
+import type { PlanId } from '../utils/plans';
 
 // ============================================================
 //  dbService — API Cloudflare Pages + D1
@@ -23,6 +24,9 @@ export interface CreatedStoreAccess {
   licenseKey: string;
   pinCode: string;
   expiresAt: string;
+  plan?: PlanId;
+  pricePaid?: number;
+  promoApplied?: boolean;
 }
 
 export interface StoreSettingsPayload {
@@ -506,7 +510,7 @@ class DatabaseService {
   }
 
   // ----------------------------------------------------------
-  //  ADMIN KARIS
+  //  ADMIN
   // ----------------------------------------------------------
 
   async loginAdmin(key: string, remember = false): Promise<{ success: boolean; stores?: Store[]; error?: string }> {
@@ -564,6 +568,8 @@ class DatabaseService {
     pinCode?: string;
     maxProducts?: number;
     durationMonths?: number;
+    plan?: PlanId;
+    promoCode?: string;
   }): Promise<CreatedStoreAccess> {
     const res = await fetch(`${API_BASE}/admin/licenses`, {
       method: 'POST',
@@ -578,8 +584,10 @@ class DatabaseService {
         city: params.city,
         quarter: params.quarter,
         pinCode: params.pinCode ?? '',
-        maxProducts: params.maxProducts ?? 20,
+        maxProducts: params.maxProducts,
         durationMonths: params.durationMonths ?? 12,
+        plan: params.plan,
+        promoCode: params.promoCode,
       }),
     });
 
@@ -596,6 +604,9 @@ class DatabaseService {
       licenseKey: data.licenseKey,
       pinCode: data.pinCode,
       expiresAt: data.expiresAt,
+      plan: data.plan,
+      pricePaid: data.pricePaid,
+      promoApplied: data.promoApplied,
     };
   }
 
@@ -639,25 +650,36 @@ class DatabaseService {
     }
   }
 
-  async renewStoreLicense(storeId: string, additionalMonths = 12): Promise<{ success: boolean; store?: Store; error?: string }> {
+  async renewStoreLicense(
+    storeId: string,
+    additionalMonths = 12,
+    options?: { plan?: PlanId; promoCode?: string; amountPaid?: number },
+  ): Promise<{ success: boolean; store?: Store; error?: string; amountPaid?: number }> {
     try {
       const res = await fetch(`${API_BASE}/admin/licenses`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ storeId, action: 'renew', additionalMonths }),
+        body: JSON.stringify({
+          storeId,
+          action: 'renew',
+          additionalMonths,
+          ...(options?.plan ? { plan: options.plan } : {}),
+          ...(options?.promoCode ? { promoCode: options.promoCode } : {}),
+          ...(options?.amountPaid !== undefined ? { amountPaid: options.amountPaid } : {}),
+        }),
       });
       const data = await parseJson(res);
       return res.ok
-        ? { success: true, store: data.store }
+        ? { success: true, store: data.store, amountPaid: data.amountPaid }
         : { success: false, error: data.error ?? 'Erreur de renouvellement' };
     } catch {
       return { success: false, error: 'Erreur réseau' };
     }
   }
 
-  async updateStoreQuota(storeId: string, maxProducts: number): Promise<{ success: boolean; store?: Store; error?: string }> {
+  async updateStoreQuota(storeId: string, maxProducts: number): Promise<{ success: boolean; store?: Store; error?: string; warning?: string }> {
     try {
       const res = await fetch(`${API_BASE}/admin/licenses`, {
         method: 'PATCH',
@@ -671,7 +693,7 @@ class DatabaseService {
         this.clearAdminKey();
       }
       return res.ok
-        ? { success: true, store: data.store }
+        ? { success: true, store: data.store, warning: data.warning }
         : { success: false, error: data.error ?? 'Erreur de mise à jour du quota' };
     } catch {
       return { success: false, error: 'Erreur réseau' };

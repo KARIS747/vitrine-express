@@ -7,6 +7,7 @@ export interface MockD1Options {
   products?: any[];
   notifications?: any[];
   notification_reads?: any[];
+  license_payments?: any[];
 }
 
 export function createMockD1(initial: MockD1Options = {}) {
@@ -18,6 +19,32 @@ export function createMockD1(initial: MockD1Options = {}) {
   const products = [...(initial.products || [])];
   const notifications = [...(initial.notifications || [])];
   const notificationReads = [...(initial.notification_reads || [])];
+  const licensePayments = [...(initial.license_payments || [])];
+
+  function latest(records: any[]): any {
+    return [...records].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))).pop() || null;
+  }
+
+  function storeWithComputed(st: any) {
+    const storeId = st.id;
+    const payments = licensePayments.filter((payment) => payment.store_id === storeId);
+    const paid = payments.filter((payment) => payment.status === 'paid');
+    const due = payments.filter((payment) => payment.status === 'due');
+    const pricePaid = paid.reduce((total, payment) => total + (Number(payment.amount) || 0), 0);
+    const amountDue = due.reduce((total, payment) => total + (Number(payment.amount) || 0), 0);
+    const latestPayment = latest([...paid, ...due]);
+    const latestLicense = latest(licenses.filter((license) => license.store_id === storeId));
+    const productsCount = products.filter((product) => product.store_id === storeId).length;
+    return {
+      ...st,
+      current_products_count: productsCount,
+      price_paid: pricePaid,
+      amount_due: amountDue,
+      plan: latestPayment?.plan ?? (Number(st.max_products) >= 999 ? 'premium' : Number(st.max_products) > 8 ? 'pro' : 'decouverte'),
+      license_status: latestLicense?.status ?? null,
+    };
+  }
+
 
   function createStatement(sql: string, params: any[] = []) {
     return {
@@ -37,6 +64,10 @@ export function createMockD1(initial: MockD1Options = {}) {
         if (norm.includes('from stores where lower(trim(name)) = lower(trim(?)) and is_active = 1')) {
           const nameToMatch = String(params[0] ?? '').trim().toLowerCase();
           return stores.find((s) => s.name && s.name.trim().toLowerCase() === nameToMatch && (s.is_active === 1 || s.is_active === true)) || null;
+        }
+        if (norm.includes('select id from stores where lower(trim(name)) = lower(trim(?))')) {
+          const nameToMatch = String(params[0] ?? '').trim().toLowerCase();
+          return stores.find((s) => s.name && s.name.trim().toLowerCase() === nameToMatch) || null;
         }
         if (
           norm.includes('from stores where license_key = ? or slug = ?') ||
@@ -69,7 +100,8 @@ export function createMockD1(initial: MockD1Options = {}) {
         }
         if (norm.includes('from stores where id')) {
           const id = params[0];
-          return stores.find((s) => s.id === id) || null;
+          const st = stores.find((s) => s.id === id);
+          return st ? storeWithComputed(st) : null;
         }
         if (norm.includes('from products where store_id') && norm.includes('count(*)')) {
           const storeId = params[0];
@@ -84,12 +116,7 @@ export function createMockD1(initial: MockD1Options = {}) {
           const id = params[0];
           const st = stores.find((s) => s.id === id);
           if (!st) return null;
-          return {
-            ...st,
-            current_products_count: products.filter((p) => p.store_id === id).length,
-            price_paid: 5000,
-            license_status: 'active',
-          };
+          return storeWithComputed(st);
         }
         return null;
       },
@@ -129,12 +156,7 @@ export function createMockD1(initial: MockD1Options = {}) {
         }
         if (norm.includes('from stores')) {
           return {
-            results: stores.map((s) => ({
-              ...s,
-              current_products_count: products.filter((p) => p.store_id === s.id).length,
-              price_paid: 5000,
-              license_status: 'active',
-            })),
+            results: stores.map((s) => storeWithComputed(s)),
           };
         }
         return { results: [] };
@@ -171,6 +193,13 @@ export function createMockD1(initial: MockD1Options = {}) {
           if (idx >= 0) sessions.splice(idx, 1);
           return { success: true };
         }
+        if (norm.includes('delete from sessions where store_id')) {
+          const storeId = params[0];
+          for (let idx = sessions.length - 1; idx >= 0; idx -= 1) {
+            if (sessions[idx].store_id === storeId) sessions.splice(idx, 1);
+          }
+          return { success: true, meta: { changes: 1 } };
+        }
         if (norm.includes('insert into stores')) {
           const storeObj: any = {
             id: params[0],
@@ -190,6 +219,107 @@ export function createMockD1(initial: MockD1Options = {}) {
           };
           stores.push(storeObj);
           return { success: true };
+        }
+        if (norm.includes('update stores set expires_at = ?, max_products')) {
+          const [expiresAt, maxProducts, id] = params;
+          const st = stores.find((s) => s.id === id);
+          if (st) {
+            st.expires_at = expiresAt;
+            st.max_products = maxProducts;
+          }
+          return { success: true, meta: { changes: 1 } };
+        }
+        if (norm.includes('update licenses set expires_at')) {
+          const [expiresAt, maxProducts, duration, pricePaid, status, notes, storeId] = params;
+          const st = stores.find((s) => s.id === storeId);
+          if (st) st.expires_at = expiresAt;
+          const matching = licenses.filter((license) => license.store_id === storeId);
+          matching.forEach((license) => {
+            license.expires_at = expiresAt;
+            license.max_products = maxProducts;
+            license.duration_months = duration;
+            license.price_paid = pricePaid;
+            license.status = status;
+            license.notes = notes;
+          });
+          return { success: true, meta: { changes: matching.length ? 1 : 0 } };
+        }
+        if (norm.includes('update licenses set status')) {
+          const [status, storeId] = params;
+          licenses.filter((license) => license.store_id === storeId).forEach((license) => {
+            license.status = status;
+          });
+          return { success: true, meta: { changes: 1 } };
+        }
+        if (norm.includes('update licenses set max_products')) {
+          const [maxProducts, storeId] = params;
+          licenses.filter((license) => license.store_id === storeId).forEach((license) => {
+            license.max_products = maxProducts;
+          });
+          return { success: true, meta: { changes: 1 } };
+        }
+        if (norm.includes('update license_payments set status')) {
+          licensePayments.filter((payment) => payment.store_id === params[1]).forEach((payment) => {
+            if (payment.status === 'due') payment.status = 'cancelled';
+          });
+          return { success: true, meta: { changes: 1 } };
+        }
+        if (norm.includes('delete from sessions where store_id')) {
+          const idx = sessions.findIndex((session) => session.store_id === params[0]);
+          if (idx >= 0) sessions.splice(idx, 1);
+          return { success: true, meta: { changes: 1 } };
+        }
+        if (norm.includes('insert into licenses')) {
+          const [
+            id,
+            licenseKey,
+            storeId,
+            clientName,
+            clientPhone,
+            pricePaid,
+            maxProducts,
+            duration,
+            expiresAt,
+            status,
+            notes,
+          ] = params;
+          licenses.push({
+            id,
+            license_key: licenseKey,
+            store_id: storeId,
+            client_name: clientName,
+            client_phone: clientPhone,
+            price_paid: Number(pricePaid) || 0,
+            max_products: Number(maxProducts) || 0,
+            duration_months: Number(duration) || 12,
+            starts_at: new Date().toISOString(),
+            expires_at: expiresAt,
+            status,
+            notes,
+          });
+          return { success: true, meta: { changes: 1 } };
+        }
+        if (norm.includes('insert into license_payments')) {
+          const literalStatus = norm.includes("'paid'")
+            ? 'paid'
+            : norm.includes("'due'")
+              ? 'due'
+              : norm.includes("'cancelled'")
+                ? 'cancelled'
+                : null;
+          const [id, storeId, licenseKey, plan, months, amount, statusOrNote, note] = params;
+          licensePayments.push({
+            id,
+            store_id: storeId,
+            license_key: licenseKey,
+            plan,
+            months: Number(months) || 12,
+            amount: Number(amount) || 0,
+            status: literalStatus ?? statusOrNote,
+            note: literalStatus ? statusOrNote : note,
+            created_at: new Date().toISOString(),
+          });
+          return { success: true, meta: { changes: 1 } };
         }
         if (norm.includes('insert into products')) {
           const prodObj: any = {
@@ -265,6 +395,7 @@ export function createMockD1(initial: MockD1Options = {}) {
     products,
     notifications,
     notificationReads,
+    licensePayments,
     prepare(sql: string) {
       return createStatement(sql);
     },

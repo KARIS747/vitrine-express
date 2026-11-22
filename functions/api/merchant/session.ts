@@ -31,7 +31,7 @@ export const onRequestGet = async (context: { request: Request; env: Env }) => {
     return json({ error: "Cette boutique a été suspendue par l'administrateur" }, 403);
   }
   if (session.store.expires_at && session.store.expires_at < new Date().toISOString()) {
-    return json({ error: "Votre licence a expiré. Contactez Karis pour la renouveler.", isExpired: true }, 403);
+    return json({ error: "Votre licence a expiré. Contactez l'équipe VitrineExpress pour la renouveler.", isExpired: true }, 403);
   }
 
   return json({ success: true, store: publicStore(session.store) });

@@ -80,7 +80,7 @@ describe('Admin API: /api/admin/licenses', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('nom de la boutique est obligatoire');
+      expect(data.error).toContain('Le nom de la boutique doit comporter au moins 2 caractères');
     });
 
     it('rejects creation if WhatsApp number is invalid', async () => {
@@ -123,6 +123,28 @@ describe('Admin API: /api/admin/licenses', () => {
       expect(data.error).toContain('déjà utilisé');
     });
 
+    it('rejects creation if WhatsApp is already used by another store', async () => {
+      const db = createMockD1({ stores: [sampleStore] });
+      const req = new Request('http://localhost/api/admin/licenses', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          storeName: 'Autre Boutique',
+          slug: 'autre-boutique',
+          whatsappNumber: sampleStore.whatsapp_number,
+        }),
+      });
+
+      const res = await onRequestPost({
+        request: req,
+        env: { DB: db, ADMIN_KEY, PIN_PEPPER },
+      });
+
+      expect(res.status).toBe(409);
+      const data = await res.json();
+      expect(data.error).toContain('Une boutique est déjà associée à ce numéro WhatsApp');
+    });
+
     it('creates store, category, and license successfully', async () => {
       const db = createMockD1();
       const req = new Request('http://localhost/api/admin/licenses', {
@@ -150,6 +172,35 @@ describe('Admin API: /api/admin/licenses', () => {
       expect(data.licenseKey).toMatch(/^LIC-[A-Z0-9]+-[A-Z0-9]+$/);
       expect(data.pinCode).toHaveLength(6); // Default generated PIN
       expect(data.expiresAt).toBeTruthy();
+    });
+
+    it('creates a Pro store with 30 products and records the 8000 FCFA payment', async () => {
+      const db = createMockD1();
+      const req = new Request('http://localhost/api/admin/licenses', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          storeName: 'Boutique Pro',
+          slug: 'boutique-pro',
+          whatsappNumber: '237699000000',
+          plan: 'pro',
+          durationMonths: 12,
+        }),
+      });
+
+      const res = await onRequestPost({
+        request: req,
+        env: { DB: db, ADMIN_KEY, PIN_PEPPER },
+      });
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.plan).toBe('pro');
+      expect(data.pricePaid).toBe(8000);
+      expect(data.store.max_products).toBe(30);
+      expect(data.store.price_paid).toBe(8000);
+      expect(db.licensePayments).toHaveLength(1);
+      expect(db.licensePayments[0]).toMatchObject({ plan: 'pro', amount: 8000, status: 'paid' });
     });
   });
 
@@ -228,6 +279,64 @@ describe('Admin API: /api/admin/licenses', () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(new Date(currentStore.expires_at).getFullYear()).toBe(2027);
+    });
+
+    it('records renewal payment and does not reactivate a suspended store', async () => {
+      const currentStore = {
+        ...sampleStore,
+        id: 'store_123',
+        is_active: 0,
+        expires_at: '2026-11-01T00:00:00.000Z',
+      };
+      const db = createMockD1({ stores: [currentStore] });
+
+      const req = new Request('http://localhost/api/admin/licenses', {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({
+          storeId: 'store_123',
+          action: 'renew',
+          plan: 'pro',
+          additionalMonths: 12,
+        }),
+      });
+
+      const res = await onRequestPatch({
+        request: req,
+        env: { DB: db, ADMIN_KEY, PIN_PEPPER },
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.store.is_active).toBe(0);
+      expect(data.store.price_paid).toBe(8000);
+      expect(data.store.max_products).toBe(30);
+    });
+
+    it('deletes merchant sessions when resetting PIN', async () => {
+      const currentStore = { ...sampleStore, id: 'store_123' };
+      const db = createMockD1({
+        stores: [currentStore],
+        sessions: [
+          { token_hash: 'tok1', scope: 'merchant', store_id: 'store_123', expires_at: '2027-01-01T00:00:00Z' },
+          { token_hash: 'tok2', scope: 'merchant', store_id: 'store_123', expires_at: '2027-01-01T00:00:00Z' },
+        ],
+      });
+
+      const req = new Request('http://localhost/api/admin/licenses', {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ storeId: 'store_123', action: 'resetPin' }),
+      });
+
+      const res = await onRequestPatch({
+        request: req,
+        env: { DB: db, ADMIN_KEY, PIN_PEPPER },
+      });
+
+      expect(res.status).toBe(200);
+      expect(db.sessions).toHaveLength(0);
     });
 
     it('toggles store active status (toggleStatus)', async () => {

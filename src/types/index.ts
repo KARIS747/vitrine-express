@@ -22,6 +22,8 @@ export interface Store {
   created_at?: string;
   current_products_count?: number;
   price_paid?: number;
+  amount_due?: number;
+  plan?: 'decouverte' | 'pro' | 'premium';
   license_status?: string;
 }
 

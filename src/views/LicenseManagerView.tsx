@@ -3,6 +3,17 @@ import { Store } from '../types';
 import { dbService, CreatedStoreAccess } from '../services/db';
 import { formatDate, formatFCFA } from '../utils/formatters';
 import { downloadStoreAccessPdf } from '../utils/accessSheet';
+import {
+  clampMonths,
+  isPromoCode,
+  PLAN_IDS,
+  PLANS,
+  planFromQuota,
+  planLabel,
+  planPrice,
+  proratedPrice,
+  type PlanId,
+} from '../utils/plans';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
@@ -42,7 +53,9 @@ const EMPTY_FORM = {
   city: 'Douala',
   quarter: '',
   pin: '',
-  maxProducts: 20,
+  plan: 'decouverte' as PlanId,
+  promoCode: '',
+  maxProducts: PLANS.decouverte.maxProducts,
   durationMonths: 12,
 };
 
@@ -114,6 +127,7 @@ async function copyText(text: string, successMessage: string) {
 }
 
 function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: string) {
+  const plan = store.plan ?? planFromQuota(store.max_products);
   const lines = [
     `Bonjour, votre vitrine ${store.name} est activée sur VitrineExpress.`,
     '',
@@ -124,10 +138,12 @@ function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: str
     `Nom de la boutique : ${store.name}`,
     `Numéro WhatsApp : ${store.whatsapp_number}`,
   ];
+  if (licenseKey) lines.push(`Clé de licence : ${licenseKey}`);
   if (pinCode) lines.push(`Code PIN secret : ${pinCode}`);
   lines.push(
     '',
-    `Quota souscrit : jusqu'à ${store.max_products} articles`,
+    `Formule : ${planLabel(plan)}`,
+    `Quota : jusqu'à ${store.max_products} articles`,
     `Validité : jusqu'au ${formatDate(store.expires_at)}`,
     '',
     'Premiers pas recommandés :',
@@ -210,7 +226,11 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
 
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const [quotaTarget, setQuotaTarget] = useState<Store | null>(null);
-  const [quotaValue, setQuotaValue] = useState('20');
+  const [quotaValue, setQuotaValue] = useState('8');
+  const [renewTarget, setRenewTarget] = useState<Store | null>(null);
+  const [renewPlan, setRenewPlan] = useState<PlanId>('decouverte');
+  const [renewMonths, setRenewMonths] = useState('12');
+  const [renewPromo, setRenewPromo] = useState('');
 
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [notifTargetStoreId, setNotifTargetStoreId] = useState<string>('');
@@ -310,6 +330,10 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       toast.error('Le code PIN doit contenir au moins 4 caractères');
       return;
     }
+    if (form.maxProducts < 1 || form.maxProducts > PLANS.premium.maxProducts) {
+      toast.error(`Entrez un quota entre 1 et ${PLANS.premium.maxProducts} articles`);
+      return;
+    }
 
     setIsCreating(true);
     try {
@@ -319,6 +343,8 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
         city: form.city,
         quarter: form.quarter.trim(),
         pinCode: form.pin,
+        plan: form.plan,
+        promoCode: form.promoCode.trim(),
         maxProducts: form.maxProducts,
         durationMonths: form.durationMonths,
       });
@@ -354,13 +380,43 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     }
   };
 
-  const handleRenew = async (store: Store) => {
-    setActionId(store.id);
+  const updatePlan = (plan: PlanId) =>
+    setForm((current) => ({
+      ...current,
+      plan,
+      maxProducts: PLANS[plan].maxProducts,
+      promoCode: plan === 'decouverte' ? '' : current.promoCode,
+    }));
+
+  const openRenewDialog = (store: Store) => {
+    setMenuOpenId(null);
+    setRenewTarget(store);
+    setRenewPlan(store.plan ?? planFromQuota(store.max_products));
+    setRenewMonths('12');
+    setRenewPromo('');
+  };
+
+  const submitRenew = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!renewTarget) return;
+
+    const target = renewTarget;
+    const months = clampMonths(renewMonths);
+    const promo = isPromoCode(renewPromo) ? renewPromo.trim().toUpperCase() : '';
+    const expected = proratedPrice(renewPlan, months, Boolean(promo));
+
+    setRenewTarget(null);
+    setActionId(target.id);
     try {
-      const result = await dbService.renewStoreLicense(store.id, 12);
+      const result = await dbService.renewStoreLicense(target.id, months, {
+        plan: renewPlan,
+        promoCode: promo || undefined,
+      });
       if (result.success && result.store) {
-        setStores((current) => current.map((item) => item.id === store.id ? { ...item, ...result.store } : item));
-        toast.success(`Licence de ${store.name} prolongée de 12 mois`);
+        setStores((current) => current.map((item) => item.id === target.id ? { ...item, ...result.store } : item));
+        toast.success(
+          `Licence de ${target.name} prolongée de ${months} mois · ${formatFCFA(result.amountPaid ?? expected)} encaissés`,
+        );
       } else {
         toast.error(result.error ?? 'Erreur de renouvellement');
         if (!dbService.isAdminAuthenticated()) setIsAuthenticated(false);
@@ -377,6 +433,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       if (result.success && result.store) {
         setStores((current) => current.map((item) => item.id === store.id ? { ...item, ...result.store } : item));
         toast.success(`Quota de ${store.name} ajusté à ${newQuota} articles`);
+        if (result.warning) toast.warning(result.warning);
       } else {
         toast.error(result.error ?? 'Erreur de mise à jour du quota');
         if (!dbService.isAdminAuthenticated()) setIsAuthenticated(false);
@@ -483,17 +540,6 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     }
   };
 
-  const requestRenew = (store: Store) => {
-    setMenuOpenId(null);
-    setConfirmRequest({
-      title: 'Prolonger la licence ?',
-      message: `${store.name} sera prolongée de 12 mois (5 000 FCFA).`,
-      confirmLabel: 'Prolonger de 12 mois',
-      tone: 'brass',
-      onConfirm: () => void handleRenew(store),
-    });
-  };
-
   const requestToggleStatus = (store: Store) => {
     const isActive = Boolean(store.is_active);
     setMenuOpenId(null);
@@ -522,15 +568,15 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   const openQuotaDialog = (store: Store) => {
     setMenuOpenId(null);
     setQuotaTarget(store);
-    setQuotaValue(String(store.max_products || 20));
+    setQuotaValue(String(store.max_products || PLANS.decouverte.maxProducts));
   };
 
   const submitQuota = (event: React.FormEvent) => {
     event.preventDefault();
     if (!quotaTarget) return;
     const newQuota = parseInt(quotaValue.trim(), 10);
-    if (Number.isNaN(newQuota) || newQuota < 1 || newQuota > 500) {
-      toast.error('Veuillez entrer un nombre valide entre 1 et 500 articles');
+    if (Number.isNaN(newQuota) || newQuota < 1 || newQuota > PLANS.premium.maxProducts) {
+      toast.error(`Veuillez entrer un nombre valide entre 1 et ${PLANS.premium.maxProducts} articles`);
       return;
     }
     const target = quotaTarget;
@@ -540,27 +586,37 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
 
   const filteredStores = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return stores.filter((store) => {
-      const days = daysUntil(store.expires_at);
-      const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'suspended' && !store.is_active) ||
-        (statusFilter === 'expiring' && Boolean(store.is_active) && days < 30) ||
-        (statusFilter === 'active' && Boolean(store.is_active) && days >= 30);
-      if (!matchesStatus) return false;
-      if (!query) return true;
-      return (
-        store.name.toLowerCase().includes(query) ||
-        store.city.toLowerCase().includes(query) ||
-        store.slug.toLowerCase().includes(query)
-      );
-    });
+    const priority: Record<StoreStatus, number> = { expired: 0, active: 1, suspended: 2 };
+    return stores
+      .filter((store) => {
+        const days = daysUntil(store.expires_at);
+        const matchesStatus =
+          statusFilter === 'all' ||
+          (statusFilter === 'suspended' && !store.is_active) ||
+          (statusFilter === 'expiring' && Boolean(store.is_active) && days < 30) ||
+          (statusFilter === 'active' && Boolean(store.is_active) && days >= 30);
+        if (!matchesStatus) return false;
+        if (!query) return true;
+        return (
+          store.name.toLowerCase().includes(query) ||
+          store.city.toLowerCase().includes(query) ||
+          store.slug.toLowerCase().includes(query) ||
+          (store.whatsapp_number ?? '').includes(query) ||
+          (store.license_key ?? '').toLowerCase().includes(query)
+        );
+      })
+      .sort((a, b) => {
+        const statusDiff = priority[getStoreStatus(a)] - priority[getStoreStatus(b)];
+        if (statusDiff !== 0) return statusDiff;
+        return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
+      });
   }, [searchQuery, statusFilter, stores]);
 
   const enRegleCount = stores.filter((store) => Boolean(store.is_active) && daysUntil(store.expires_at) >= 30).length;
   const aEcheanceCount = stores.filter((store) => Boolean(store.is_active) && daysUntil(store.expires_at) < 30).length;
   const suspenduesCount = stores.filter((store) => !store.is_active).length;
   const recordedRevenue = stores.reduce((total, store) => total + (Number(store.price_paid) || 0), 0);
+  const outstandingRevenue = stores.reduce((total, store) => total + (Number(store.amount_due) || 0), 0);
   const hasActiveFilter = statusFilter !== 'all' || searchQuery.trim().length > 0;
 
   const segments: { key: StatusFilter; label: string; count: number }[] = [
@@ -743,12 +799,21 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
           <span>
             {filteredStores.length} boutique{filteredStores.length > 1 ? 's' : ''} affichée{filteredStores.length > 1 ? 's' : ''}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Coins className="w-3.5 h-3.5 text-ledger-brass" />
-            Montants enregistrés :
-            <span className="text-ledger-ink font-medium tabular-nums">
-              {recordedRevenue > 0 ? formatFCFA(recordedRevenue) : '—'}
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="inline-flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-ledger-brass" />
+              Encaissé :
+              <span className="text-ledger-ink font-medium tabular-nums">
+                {recordedRevenue > 0 ? formatFCFA(recordedRevenue) : '—'}
+              </span>
             </span>
+            {outstandingRevenue > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-ledger-red">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Reste dû :
+                <span className="font-medium tabular-nums">{formatFCFA(outstandingRevenue)}</span>
+              </span>
+            )}
           </span>
         </div>
 
@@ -759,7 +824,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Nom, ville ou identifiant"
+              placeholder="Nom, téléphone, clé, ville..."
               className={`${FIELD} pl-9`}
             />
           </div>
@@ -838,6 +903,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 const currentProducts = store.current_products_count ?? 0;
                 const isBusy = actionId === store.id;
                 const isMenuOpen = menuOpenId === store.id;
+                const canPreview = Boolean(store.is_active) && days > 0;
 
                 return (
                   <div
@@ -870,6 +936,9 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                             {store.city}{store.quarter ? `, ${store.quarter}` : ''}
                           </span>
                         </div>
+                        <div className="mt-0.5 font-ledger-mono text-[11px] text-ledger-muted">
+                          {planLabel(store.plan ?? planFromQuota(store.max_products))} · {store.max_products} articles
+                        </div>
                         <button
                           onClick={() => void copyText(store.license_key ?? '', 'Clé de licence copiée')}
                           className={`mt-1.5 inline-flex items-center gap-1 font-ledger-mono text-[11px] text-ledger-muted hover:text-ledger-ink transition-colors cursor-pointer ${FOCUS}`}
@@ -881,9 +950,14 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="lg:pt-1">
-                      <StatusStamp status={status} />
-                    </div>
+                      <div className="lg:pt-1 flex flex-col gap-1">
+                        <StatusStamp status={status} />
+                        {Number(store.amount_due) > 0 && (
+                          <span className="text-[11px] text-ledger-red font-medium">
+                            {formatFCFA(Number(store.amount_due))} dû
+                          </span>
+                        )}
+                      </div>
 
                     <div className="lg:pt-0.5">
                       <div className="flex items-baseline justify-between gap-2">
@@ -895,6 +969,11 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                         </span>
                       </div>
                       <ExpiryMeter expiresAt={store.expires_at} />
+                      {Number(store.amount_due) > 0 && (
+                        <span className="mt-0.5 text-[11px] text-ledger-red font-medium">
+                          {formatFCFA(Number(store.amount_due))} à encaisser
+                        </span>
+                      )}
                     </div>
 
                     <div className="lg:pt-0.5">
@@ -908,7 +987,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
 
                     <div className="flex items-center gap-2 lg:justify-end">
                       <button
-                        onClick={() => requestRenew(store)}
+                        onClick={() => openRenewDialog(store)}
                         disabled={isBusy}
                         className={`inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-md border border-ledger-brass/60 bg-ledger-brass-soft/40 text-ledger-brass text-sm font-semibold transition-colors hover:bg-ledger-brass-soft disabled:opacity-50 cursor-pointer ${FOCUS}`}
                       >
@@ -940,7 +1019,9 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                                   setMenuOpenId(null);
                                   onSelectStore(store);
                                 }}
-                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 min-h-10 text-sm text-left text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+                                disabled={!canPreview}
+                                title={!canPreview ? "Voir la vitrine nécessite une boutique active et en cours de validité" : "Voir la vitrine"}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2.5 min-h-10 text-sm text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${Boolean(canPreview) ? 'text-ledger-ink hover:bg-ledger-paper' : 'text-ledger-muted'} ${FOCUS}`}
                               >
                                 <StoreIcon className="w-4 h-4 text-ledger-muted" />
                                 Voir la vitrine
@@ -1090,6 +1171,48 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 </div>
               </div>
 
+              <div>
+                <label className={LABEL}>Formule</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PLAN_IDS.map((planId) => {
+                    const definition = PLANS[planId];
+                    const active = form.plan === planId;
+                    return (
+                      <button
+                        key={planId}
+                        type="button"
+                        onClick={() => updatePlan(planId)}
+                        aria-pressed={active}
+                        className={`flex flex-col items-center justify-center min-h-11 rounded-md border text-center cursor-pointer ${FOCUS} ${
+                          active
+                            ? 'border-ledger-green bg-ledger-green/10 text-ledger-ink'
+                            : 'border-ledger-line bg-white text-ledger-muted hover:bg-ledger-paper'
+                        }`}
+                      >
+                        <span className="text-xs font-semibold font-ledger-mono">{definition.label}</span>
+                        <span className="text-[10px] text-ledger-muted">
+                          {definition.maxProducts} art. · {definition.price > 0 ? formatFCFA(definition.price) : 'Gratuit'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {form.plan !== 'decouverte' && (
+                <div>
+                  <label className={LABEL} htmlFor="store-promo">Code promo (optionnel)</label>
+                  <input
+                    id="store-promo"
+                    type="text"
+                    value={form.promoCode}
+                    onChange={(event) => setForm({ ...form, promoCode: event.target.value.toUpperCase() })}
+                    placeholder="Ex : VIP237"
+                    className={`${FIELD} font-ledger-mono`}
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className={LABEL} htmlFor="store-pin">PIN</label>
@@ -1110,7 +1233,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                     id="store-quota"
                     type="number"
                     min={1}
-                    max={200}
+                    max={PLANS.premium.maxProducts}
                     value={form.maxProducts}
                     onChange={(event) => setForm({ ...form, maxProducts: Number(event.target.value) })}
                     className={FIELD}
@@ -1128,6 +1251,11 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                     className={FIELD}
                   />
                 </div>
+              </div>
+
+              <div className="flex items-baseline justify-between gap-3 p-3 rounded-md bg-ledger-paper border border-ledger-line text-xs text-ledger-ink leading-relaxed">
+                <span className="font-ledger-mono shrink-0">Résumé</span>
+                <span>{planLabel(form.plan)} · {formatFCFA(planPrice(form.plan, isPromoCode(form.promoCode)))} · {form.maxProducts} articles · {form.durationMonths} mois</span>
               </div>
 
               <div className="p-3 rounded-md bg-ledger-paper border border-ledger-line text-xs text-ledger-muted leading-relaxed">
@@ -1195,6 +1323,12 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                   <dt className="text-sm text-ledger-muted shrink-0">Validité</dt>
                   <dd className="text-xs font-ledger-mono text-ledger-ink">
                     {formatDate(createdAccess.expiresAt)}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt className="text-sm text-ledger-muted shrink-0">Formule</dt>
+                  <dd className="text-xs text-ledger-ink">
+                    {createdAccess.plan ? `${planLabel(createdAccess.plan)} · ${formatFCFA(createdAccess.pricePaid ?? 0)}` : '—'}
                   </dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-3 py-2.5">
@@ -1423,7 +1557,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 autoFocus
                 className={FIELD}
               />
-              <p className="text-xs text-ledger-muted mt-1.5">Entre 1 et 500 articles.</p>
+              <p className="text-xs text-ledger-muted mt-1.5">Entre 1 et {PLANS.premium.maxProducts} articles.</p>
             </div>
             <div className="flex items-center gap-2 mt-5">
               <button
@@ -1438,6 +1572,107 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 className={`flex-1 min-h-11 rounded-md bg-ledger-green text-white text-sm font-semibold transition-colors hover:bg-ledger-green/90 cursor-pointer ${FOCUS}`}
               >
                 Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {renewTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ledger-ink/50" onClick={() => setRenewTarget(null)} />
+          <form
+            onSubmit={submitRenew}
+            className="relative w-full max-w-sm bg-ledger-surface border border-ledger-line p-6 space-y-4"
+          >
+            <h2 className="font-registry font-semibold text-xl text-ledger-ink">Renouveler la licence</h2>
+            <p className="text-sm text-ledger-muted leading-relaxed">
+              {renewTarget.name} sera prolongée. Ce renouvellement ne réactive pas une boutique suspendue.
+            </p>
+            {Number(renewTarget.amount_due) > 0 && (
+              <p className="text-xs text-ledger-red">
+                Solde dû actuel : {formatFCFA(Number(renewTarget.amount_due))}
+              </p>
+            )}
+
+            <div>
+              <label className={LABEL}>Formule</label>
+              <div className="grid grid-cols-3 gap-2">
+                {PLAN_IDS.map((planId) => {
+                  const definition = PLANS[planId];
+                  const active = renewPlan === planId;
+                  return (
+                    <button
+                      key={planId}
+                      type="button"
+                      onClick={() => setRenewPlan(planId)}
+                      aria-pressed={active}
+                      className={`flex flex-col items-center justify-center min-h-11 rounded-md border text-center cursor-pointer ${FOCUS} ${
+                        active
+                          ? 'border-ledger-green bg-ledger-green/10 text-ledger-ink'
+                          : 'border-ledger-line bg-white text-ledger-muted hover:bg-ledger-paper'
+                      }`}
+                    >
+                      <span className="text-xs font-semibold font-ledger-mono">{definition.label}</span>
+                      <span className="text-[10px] text-ledger-muted">
+                        {definition.maxProducts} art. · {definition.price > 0 ? formatFCFA(definition.price) : 'Gratuit'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {renewPlan !== 'decouverte' && (
+              <div>
+                <label className={LABEL} htmlFor="renew-promo">Code promo (optionnel)</label>
+                <input
+                  id="renew-promo"
+                  type="text"
+                  value={renewPromo}
+                  onChange={(event) => setRenewPromo(event.target.value.toUpperCase())}
+                  placeholder="Ex : VIP237"
+                  className={`${FIELD} font-ledger-mono`}
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL} htmlFor="renew-months">Mois</label>
+                <input
+                  id="renew-months"
+                  type="number"
+                  min={1}
+                  max={36}
+                  value={renewMonths}
+                  onChange={(event) => setRenewMonths(event.target.value)}
+                  autoFocus
+                  className={FIELD}
+                />
+              </div>
+              <div className="flex flex-col justify-center px-1">
+                <span className="text-sm text-ledger-ink font-medium">
+                  {formatFCFA(proratedPrice(renewPlan, clampMonths(renewMonths), isPromoCode(renewPromo)))}
+                </span>
+                <span className="text-[11px] text-ledger-muted">Montant à encaisser</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setRenewTarget(null)}
+                className={`flex-1 min-h-11 rounded-md border border-ledger-line text-sm font-medium text-ledger-ink hover:bg-ledger-paper transition-colors cursor-pointer ${FOCUS}`}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={Boolean(renewTarget && actionId === renewTarget.id)}
+                className={`flex-1 min-h-11 rounded-md bg-ledger-brass text-ledger-ink text-sm font-semibold transition-colors hover:brightness-95 disabled:opacity-50 cursor-pointer ${FOCUS}`}
+              >
+                Enregistrer le renouvellement
               </button>
             </div>
           </form>

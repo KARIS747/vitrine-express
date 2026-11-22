@@ -2,6 +2,7 @@ import type { jsPDF as JsPdf } from 'jspdf';
 import { Store } from '../types';
 import { formatDate } from './formatters';
 import { generateQRCodeDataUrl } from './qrCode';
+import { planFromQuota, planLabel } from './plans';
 
 interface StoreAccessSheetInput {
   store: Store;
@@ -53,6 +54,18 @@ const fitFontSize = (
   return size;
 };
 
+const truncateToWidth = (doc: JsPdf, text: string, maxWidth: number): string => {
+  if (doc.getTextWidth(text) <= maxWidth) return text;
+  let low = 0;
+  let high = text.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (doc.getTextWidth(`${text.slice(0, mid)}…`) <= maxWidth) low = mid;
+    else high = mid - 1;
+  }
+  return `${text.slice(0, low)}…`;
+};
+
 const safeSlug = (slug: string) =>
   slug.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'boutique';
 
@@ -61,14 +74,20 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
   const origin = typeof window !== 'undefined'
     ? window.location.origin
     : 'https://vitrine-express.pages.dev';
+  const domain = new URL(origin).host;
   const storeUrl = input.storeUrl ?? `${origin}/boutique/${store.slug}`;
   const merchantUrl = `${origin}/merchant`;
+  const plan = store.plan ?? planFromQuota(store.max_products);
   const qrDataUrl = await generateQRCodeDataUrl(storeUrl, 512, '#171E26', '#FFFFFF');
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
   const generatedAt = new Date();
   const expiryDate = formatDate(expiresAt ?? store.expires_at) || 'Non définie';
-  const location = [store.city, store.quarter].filter(Boolean).join(' · ') || 'Cameroun';
+  const location = [store.city, store.quarter].filter(Boolean).join(', ') || 'Cameroun';
+  const isExpired = (() => {
+    const expiry = new Date(expiresAt ?? store.expires_at).getTime();
+    return Number.isFinite(expiry) && expiry <= Date.now();
+  })();
 
   doc.setProperties({
     title: `Fiche d'accès - ${store.name}`,
@@ -111,13 +130,25 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
   doc.text("FICHE D'ACCÈS BOUTIQUE", MARGIN, 52);
 
   doc.setTextColor(...INK);
-  fitFontSize(doc, store.name, CONTENT_WIDTH, 22, 14);
-  doc.text(store.name, MARGIN, 62);
+  const displayName = truncateToWidth(doc, store.name, CONTENT_WIDTH - 55);
+  fitFontSize(doc, displayName, CONTENT_WIDTH, 22, 14);
+  doc.text(displayName, MARGIN, 62);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...BRAND);
+  doc.text(`${planLabel(plan)} · ${store.max_products} articles`, MARGIN, 69);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...INK_SOFT);
-  doc.text(location, MARGIN, 69);
+  doc.text(location, MARGIN, 77);
+
+  if (isExpired) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...RED);
+    doc.text('LICENCE EXPIRÉE', PAGE_WIDTH - MARGIN, 62, { align: 'right' });
+  }
 
   const linkY = 76;
   const linkH = 32;
@@ -168,36 +199,32 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.8);
   doc.setTextColor(...MUTED);
-  doc.text('CLÉ DE LICENCE', leftX, credY + 10);
+  doc.text('NUMÉRO WHATSAPP', leftX, credY + 10);
 
   doc.setFont('courier', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(8.5);
   doc.setTextColor(...INK);
-  doc.text(licenseKey || 'Non disponible', leftX, credY + 17, { maxWidth: 92 });
+  doc.text(store.whatsapp_number || 'Non renseigné', leftX, credY + 17, { maxWidth: 85 });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.8);
   doc.setTextColor(...MUTED);
-  doc.text('ESPACE GÉRANT', leftX, credY + 29);
+  doc.text('CLÉ DE LICENCE', leftX, credY + 27);
+
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...INK);
+  doc.text(licenseKey || 'Non disponible', leftX, credY + 34, { maxWidth: 92 });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.8);
+  doc.setTextColor(...MUTED);
+  doc.text('ESPACE GÉRANT', leftX, credY + 45);
 
   doc.setFont('courier', 'normal');
   doc.setFontSize(7.8);
   doc.setTextColor(...INK);
-  doc.text(merchantUrl, leftX, credY + 35, { maxWidth: 92 });
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
-  doc.setTextColor(...MUTED);
-  doc.text('EXPIRATION', leftX, credY + 47);
-
-  doc.setFontSize(9);
-  doc.setTextColor(...INK);
-  doc.text(expiryDate, leftX, credY + 53);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...INK_SOFT);
-  doc.text(`${store.max_products} articles inclus`, leftX + 43, credY + 53);
+  doc.text(truncateToWidth(doc, merchantUrl, 92), leftX, credY + 52, { maxWidth: 92 });
 
   doc.setFillColor(...WARM);
   doc.setDrawColor(...WARM_BORDER);
@@ -212,22 +239,38 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
     doc.setFont('courier', 'bold');
     doc.setFontSize(22);
     doc.setTextColor(...BRAND_DARK);
-    doc.text(pinCode, rightX + rightW / 2, credY + 30, { align: 'center' });
+    doc.text(pinCode, rightX + rightW / 2, credY + 24, { align: 'center' });
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.5);
     doc.setTextColor(...INK_SOFT);
-    doc.text('À conserver confidentiellement', rightX + rightW / 2, credY + 42, { align: 'center' });
+    doc.text('À conserver confidentialement', rightX + rightW / 2, credY + 34, { align: 'center' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.8);
+    doc.setTextColor(...MUTED);
+    doc.text('EXPIRATION', rightX + rightW / 2, credY + 41, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setTextColor(...INK);
+    doc.text(expiryDate, rightX + rightW / 2, credY + 48, { align: 'center' });
   } else {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...INK_SOFT);
-    doc.text('Non inclus', rightX + rightW / 2, credY + 28, { align: 'center' });
+    doc.text('Non inclus', rightX + rightW / 2, credY + 20, { align: 'center' });
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.5);
-    doc.text('Régénérez le PIN depuis', rightX + rightW / 2, credY + 35, { align: 'center' });
-    doc.text('le License Manager', rightX + rightW / 2, credY + 39, { align: 'center' });
+    doc.setTextColor(...INK_SOFT);
+    doc.text('Demandez un nouveau PIN à l’équipe VitrineExpress.', rightX + rightW / 2, credY + 30, { align: 'center', maxWidth: rightW - 10 });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.8);
+    doc.setTextColor(...MUTED);
+    doc.text('EXPIRATION', rightX + rightW / 2, credY + 41, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setTextColor(...INK);
+    doc.text(expiryDate, rightX + rightW / 2, credY + 48, { align: 'center' });
   }
 
   const stepsLabelY = 191;
@@ -239,7 +282,7 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
   doc.text('POUR COMMENCER', MARGIN, stepsLabelY);
 
   const steps = [
-    "Ouvrez l'espace gérant avec la clé de licence et le code PIN.",
+    "Ouvrez l'espace gérant avec votre nom de boutique (ou numéro WhatsApp) et votre code PIN.",
     'Ajoutez vos produits, photos, prix et catégories.',
     'Partagez le lien public ou le QR code avec vos clients.',
     'Mettez à jour vos arrivages pour informer vos clients.',
@@ -295,7 +338,7 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
   doc.setFontSize(7.2);
   doc.setTextColor(...RED);
   doc.text(
-    "Ce document contient les identifiants d'accès à votre boutique. Conservez-le en lieu sûr et ne le partagez pas. En cas de perte, générez un nouveau PIN depuis le License Manager.",
+    "Ce document contient les identifiants d'accès à votre boutique. Conservez-le en lieu sûr et ne le partagez pas. En cas de perte, demandez un nouveau PIN à l'équipe VitrineExpress.",
     MARGIN + 5,
     confY + 12,
     { maxWidth: CONTENT_WIDTH - 10 },
@@ -309,7 +352,7 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
     MARGIN,
     PAGE_HEIGHT - 4,
   );
-  doc.text('vitrine-express.pages.dev', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 4, { align: 'right' });
+  doc.text(domain, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 4, { align: 'right' });
 
   doc.save(`acces-${safeSlug(store.slug)}.pdf`);
 }

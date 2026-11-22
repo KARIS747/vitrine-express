@@ -1,5 +1,5 @@
 -- =========================================================================
--- SCHEMA CLOUDFLARE D1 : VITRINE EXPRESS (Karis L3 Informatique)
+-- SCHEMA CLOUDFLARE D1 : VITRINE EXPRESS (Gestionnaire de licences)
 -- Base de données relationnelle Serverless haute performance & 100% Gratuite
 -- =========================================================================
 
@@ -21,11 +21,11 @@ CREATE TABLE IF NOT EXISTS stores (
     banner_url TEXT,                       -- Photo de couverture / enseigne
     theme_primary TEXT DEFAULT '#059669',  -- Couleur principale de la vitrine
     theme_accent TEXT DEFAULT '#F59E0B',   -- Couleur d'accent de la vitrine
-    license_key TEXT UNIQUE NOT NULL,      -- Clé de licence délivrée par Karis
+    license_key TEXT UNIQUE NOT NULL,      -- Clé de licence délivrée par l'équipe VitrineExpress
     pin_code TEXT NOT NULL,                -- PIN haché (hmac-sha256$sel$hash) ou ancien PIN en clair
     max_products INTEGER DEFAULT 20,       -- Quota souscrit (défaut: 20 produits pour 5000 FCFA/an)
     expires_at TEXT NOT NULL,              -- Date d'expiration ISO (ex: '2027-10-25T00:00:00Z')
-    is_active INTEGER DEFAULT 1,           -- 1 = Actif, 0 = Suspendu par Karis
+    is_active INTEGER DEFAULT 1,           -- 1 = Actif, 0 = Suspendu par l'équipe VitrineExpress
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX IF NOT EXISTS idx_products_store ON products(store_id);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 
--- 4. Table des Licences & Facturation Karis (License Manager)
+-- 4. Table des Licences & Facturation (License Manager)
 CREATE TABLE IF NOT EXISTS licenses (
     id TEXT PRIMARY KEY,
     license_key TEXT UNIQUE NOT NULL,
@@ -85,6 +85,23 @@ CREATE TABLE IF NOT EXISTS licenses (
     notes TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 4b. Historique des paiements et des montants dus par licence
+CREATE TABLE IF NOT EXISTS license_payments (
+    id TEXT PRIMARY KEY,
+    store_id TEXT NOT NULL,
+    license_key TEXT NOT NULL,
+    plan TEXT NOT NULL DEFAULT 'decouverte',
+    months INTEGER NOT NULL DEFAULT 12,
+    amount INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'paid',   -- 'paid' | 'due' | 'cancelled'
+    note TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_license_payments_store ON license_payments(store_id);
+CREATE INDEX IF NOT EXISTS idx_license_payments_status ON license_payments(store_id, status);
 
 -- 5. Limitation des tentatives de connexion (admin et boutiquiers)
 CREATE TABLE IF NOT EXISTS auth_attempts (

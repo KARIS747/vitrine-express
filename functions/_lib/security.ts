@@ -366,7 +366,7 @@ function storeAccessResponse(store: any): Response | null {
   }
   if (store.expires_at && store.expires_at < new Date().toISOString()) {
     return json({
-      error: "Votre licence a expiré. Contactez Karis pour le renouveler.",
+      error: "Votre licence a expiré. Contactez l'équipe VitrineExpress pour le renouveler.",
       isExpired: true,
     }, 403);
   }
@@ -653,7 +653,7 @@ export async function authenticateMerchantLogin(
   if (store.expires_at && store.expires_at < new Date().toISOString()) {
     return {
       response: json({
-        error: "Votre licence a expiré. Contactez Karis pour la renouveler.",
+        error: "Votre licence a expiré. Contactez l'équipe VitrineExpress pour la renouveler.",
         isExpired: true,
       }, 403),
     };

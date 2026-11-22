@@ -1,11 +1,11 @@
 # VitrineExpress
 
-PWA de vitrines WhatsApp pour boutiques, pensée pour Karis (L3 Informatique, Cameroun) et conçue pour tourner à 100 % sur l'offre gratuite de Cloudflare Pages + D1.
+PWA de vitrines WhatsApp pour boutiques, pensée pour aider les commerçants du Cameroun à vendre en ligne sur WhatsApp. Conçue pour tourner à 100 % sur l'offre gratuite de Cloudflare Pages + D1.
 
 ## Modèle économique
 
-1. Karis crée chaque boutique depuis le License Manager (`/admin`) et remet au commerçant son lien public, sa clé de licence et son PIN.
-2. La formule de base coûte 5 000 FCFA/an et donne droit à 20 produits.
+1. L'équipe VitrineExpress crée chaque boutique depuis le License Manager (`/admin`) et remet au commerçant son lien public, sa clé de licence et son PIN.
+2. La formule Découverte est gratuite et offre 8 produits. Pro : 8 000 FCFA/an pour 30 articles. Premium : 20 000 FCFA/an pour 999 articles.
 3. Les commandes se font directement sur WhatsApp, sans passerelle de paiement.
 4. Les produits peuvent être marqués « en stock » ou « bientôt disponible » avec une date de réapprovisionnement.
 5. Les photos sont compressées côté navigateur avant l'envoi.

@@ -95,7 +95,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
     if (currentTotal >= maxAllowed) {
       return json({
-        error: `Quota maximal de votre formule atteint (${currentTotal}/${maxAllowed} articles). Contactez Karis pour étendre votre compte.`,
+        error: `Quota maximal de votre formule atteint (${currentTotal}/${maxAllowed} articles). Contactez l'équipe VitrineExpress pour étendre votre compte.`,
         limitReached: true,
         currentTotal,
         maxAllowed,
