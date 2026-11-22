@@ -65,9 +65,17 @@ Le schéma complet est défini dans `schema.sql`.
 4. **`notifications`** : Centre de notifications in-app.
    - `id`, `store_id` (NULL = broadcast général, ou ID boutique = ciblé), `title`, `message`, `type` (`info`|`success`|`warning`|`tip`), `link_url`, `created_at`.
 5. **`notification_reads`** : Suivi de lecture des notifications (`notification_id`, `store_id`, `read_at`).
-6. **`sessions`** : Sessions HttpOnly pour marchands et administrateur (`token_hash`, `scope`, `store_id`, `expires_at`).
-7. **`auth_attempts`** : Protection anti-brute force / rate limiting.
-8. **`licenses`** : Historique et facturation interne.
+6. **`license_payments`** : Grand livre comptable des règlements et créances par licence (`id`, `store_id`, `license_key`, `plan`, `months`, `amount`, `status` ['paid'|'due'|'cancelled'], `note`, `created_at`).
+7. **`sessions`** : Sessions HttpOnly pour marchands et administrateur (`token_hash`, `scope`, `store_id`, `expires_at`).
+8. **`auth_attempts`** : Protection anti-brute force / rate limiting.
+9. **`licenses`** : Historique et facturation interne.
+
+---
+
+## 4b. Modules Partagés de Plans (`plans.ts`)
+- Backend : `functions/_lib/plans.ts`
+- Frontend : `src/utils/plans.ts`
+Contient les définitions uniques des plans (`PLAN_IDS`, `PLANS`, `normalizePlan`, `planPrice`, `planFromQuota`, `planLabel`, `addMonths`, `proratedPrice`, `isPromoCode`). Doit toujours rester synchronisé entre front et back.
 
 ---
 
