@@ -8,6 +8,7 @@ export interface Store {
   phone_call?: string;
   contact_preference?: 'whatsapp' | 'email';
   contact_email?: string;
+  country?: string;
   city: string;
   quarter?: string;
   address_notes?: string;

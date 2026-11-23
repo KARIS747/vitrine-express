@@ -8,6 +8,7 @@ export const publicStore = (store: any) => ({
   description: store.description,
   whatsapp_number: store.whatsapp_number,
   phone_call: store.phone_call,
+  country: store.country ?? 'Cameroun',
   city: store.city,
   quarter: store.quarter,
   address_notes: store.address_notes,

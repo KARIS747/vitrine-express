@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS stores (
     phone_call TEXT,                       -- Numéro d'appel direct
     contact_preference TEXT DEFAULT 'whatsapp', -- Canal favori : 'whatsapp' ou 'email'
     contact_email TEXT,                    -- Adresse email si préférence email
+    country TEXT DEFAULT 'Cameroun',       -- Pays (Cameroun, Côte d'Ivoire, Sénégal...)
     city TEXT DEFAULT 'Douala',            -- Ville (Douala, Yaoundé, Bafoussam...)
     quarter TEXT,                          -- Quartier (Akwa, Bonamoussadi, Mokolo...)
     address_notes TEXT,                    -- Précision (ex: Face Boulangerie Saker)

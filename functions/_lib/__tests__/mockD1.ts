@@ -201,21 +201,24 @@ export function createMockD1(initial: MockD1Options = {}) {
           return { success: true, meta: { changes: 1 } };
         }
         if (norm.includes('insert into stores')) {
+          const hasCountry = norm.includes('country');
+          const hasPref = norm.includes('contact_preference');
           const storeObj: any = {
             id: params[0],
             slug: params[1],
             name: params[2],
             whatsapp_number: params[3],
             phone_call: params[4],
-            city: norm.includes('contact_preference') ? params[7] : params[5],
-            quarter: norm.includes('contact_preference') ? params[8] : params[6],
-            license_key: norm.includes('contact_preference') ? params[9] : params[7],
-            pin_code: norm.includes('contact_preference') ? params[10] : params[8],
-            max_products: norm.includes('contact_preference') ? params[11] : params[9],
-            expires_at: norm.includes('contact_preference') ? params[12] : params[10],
+            contact_preference: hasPref ? params[5] : 'whatsapp',
+            contact_email: hasPref ? params[6] : null,
+            country: hasCountry ? params[7] : 'Cameroun',
+            city: hasCountry ? params[8] : (hasPref ? params[7] : params[5]),
+            quarter: hasCountry ? params[9] : (hasPref ? params[8] : params[6]),
+            license_key: hasCountry ? params[10] : (hasPref ? params[9] : params[7]),
+            pin_code: hasCountry ? params[11] : (hasPref ? params[10] : params[8]),
+            max_products: hasCountry ? params[12] : (hasPref ? params[11] : params[9]),
+            expires_at: hasCountry ? params[13] : (hasPref ? params[12] : params[10]),
             is_active: 1,
-            contact_preference: norm.includes('contact_preference') ? params[5] : 'whatsapp',
-            contact_email: norm.includes('contact_preference') ? params[6] : null,
           };
           stores.push(storeObj);
           return { success: true };

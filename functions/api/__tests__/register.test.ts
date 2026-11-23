@@ -143,6 +143,25 @@ describe('Register API: POST /api/register', () => {
     expect(body.store.contact_email).toBe('contact@elegance.cm');
   });
 
+  it('creates store with custom country and WhatsApp contact', async () => {
+    const db = createMockD1();
+    const req = createRequest({
+      ...basePayload,
+      storeName: 'Boutique Abidjan Chic',
+      country: 'Côte d’Ivoire',
+      city: 'Abidjan',
+      quarter: 'Cocody',
+    });
+    const res = await onRequestPost({ request: req, env: { DB: db, PIN_PEPPER } });
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.store.country).toBe('Côte d’Ivoire');
+    expect(body.store.city).toBe('Abidjan');
+    expect(body.store.quarter).toBe('Cocody');
+  });
+
   it('rejects with 409 when store name is already used by an active store', async () => {
     const existingStore = {
       id: 'store_existing_name',

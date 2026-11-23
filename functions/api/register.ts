@@ -66,6 +66,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     const {
       storeName,
       whatsappNumber,
+      country,
       city,
       quarter,
       contactPreference = "whatsapp",
@@ -77,6 +78,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
     const cleanName = String(storeName ?? "").trim().slice(0, 80);
     const cleanWhatsApp = String(whatsappNumber ?? "").replace(/[^0-9]/g, "");
+    const cleanCountry = String(country || "Cameroun").trim().slice(0, 60);
     const cleanCity = String(city || "Douala").trim().slice(0, 50);
     const cleanQuarter = String(quarter || "").trim().slice(0, 80);
     const pref = contactPreference === "email" ? "email" : "whatsapp";
@@ -157,17 +159,17 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
     const pinHash = await hashPin(cleanPin, pepper);
 
-    const contactNotes = `Formule demandée : ${planLabel(cleanPlan)} (Dû: ${priceDue} FCFA) | Code promo : ${cleanPromo || "aucun"}${isPromoValid ? " [VALIDE]" : ""} | Contact favori : ${pref} | Email : ${cleanEmail || "N/A"}`;
+    const contactNotes = `Pays : ${cleanCountry} | Formule demandée : ${planLabel(cleanPlan)} (Dû: ${priceDue} FCFA) | Code promo : ${cleanPromo || "aucun"}${isPromoValid ? " [VALIDE]" : ""} | Contact favori : ${pref} | Email : ${cleanEmail || "N/A"}`;
 
-    // 6. Insertion sécurisée en base D1 (avec fallback si colonnes contact_preference pas encore migrées)
+    // 6. Insertion sécurisée en base D1 (avec fallback si colonnes pas encore migrées)
     const paymentStatus = priceDue > 0 ? "due" : "paid";
     try {
       await db.batch([
         db.prepare(`
           INSERT INTO stores (
             id, slug, name, whatsapp_number, phone_call, contact_preference, contact_email,
-            city, quarter, license_key, pin_code, max_products, expires_at, is_active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            country, city, quarter, license_key, pin_code, max_products, expires_at, is_active
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
         `).bind(
           storeId,
           resolvedSlug,
@@ -176,6 +178,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           cleanWhatsApp,
           pref,
           cleanEmail || null,
+          cleanCountry,
           cleanCity,
           cleanQuarter,
           licenseKey,
@@ -220,8 +223,11 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         ),
       ]);
     } catch (insertErr: any) {
-      // Si la table stores ne possède pas encore les colonnes contact_preference / contact_email
-      if (String(insertErr?.message || "").includes("contact_preference")) {
+      // Fallback si la table stores ne possède pas encore les colonnes contact_preference / country
+      if (
+        String(insertErr?.message || "").includes("contact_preference") ||
+        String(insertErr?.message || "").includes("country")
+      ) {
         await db.batch([
           db.prepare(`
             INSERT INTO stores (

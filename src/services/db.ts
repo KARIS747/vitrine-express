@@ -258,6 +258,7 @@ class DatabaseService {
   async registerStore(payload: {
     storeName: string;
     whatsappNumber: string;
+    country?: string;
     city?: string;
     quarter?: string;
     contactPreference: 'whatsapp' | 'email';

@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Globe,
   HeartHandshake,
   Loader2,
   Lock,
@@ -33,6 +34,24 @@ interface RegisterViewProps {
   onOpenStore: (slug: string) => void;
 }
 
+const COUNTRIES = [
+  'Cameroun',
+  'Côte d’Ivoire',
+  'Sénégal',
+  'Gabon',
+  'Congo',
+  'RDC',
+  'Bénin',
+  'Togo',
+  'Mali',
+  'Guinée',
+  'Burkina Faso',
+  'Tchad',
+  'Centrafrique',
+  'France',
+  'Autre',
+];
+
 const CITIES = ['Douala', 'Yaoundé', 'Bafoussam', 'Garoua', 'Kribi', 'Bamenda', 'Autre'];
 
 export const RegisterView: React.FC<RegisterViewProps> = ({
@@ -46,7 +65,10 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
   // Form State
   const [storeName, setStoreName] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [country, setCountry] = useState('Cameroun');
+  const [customCountry, setCustomCountry] = useState('');
   const [city, setCity] = useState('Douala');
+  const [customCity, setCustomCity] = useState('');
   const [quarter, setQuarter] = useState('');
   const [contactPreference, setContactPreference] = useState<'whatsapp' | 'email'>('whatsapp');
   const [contactEmail, setContactEmail] = useState('');
@@ -165,12 +187,16 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
       return;
     }
 
+    const effectiveCountry = country === 'Autre' ? customCountry.trim() : country;
+    const effectiveCity = city === 'Autre' ? (customCity.trim() || 'Autre') : city;
+
     setIsSubmitting(true);
     try {
       const res = await dbService.registerStore({
         storeName: storeName.trim(),
         whatsappNumber: cleanPhone,
-        city,
+        country: effectiveCountry || 'Cameroun',
+        city: effectiveCity,
         quarter: quarter.trim(),
         contactPreference,
         contactEmail: contactPreference === 'email' ? contactEmail.trim() : undefined,
@@ -421,7 +447,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                 {storeName.trim() || 'Nom de votre commerce'}
               </h2>
               <p className="text-[11px] text-ink-500 dark:text-ink-400 truncate">
-                {city} {quarter.trim() ? `• ${quarter.trim()}` : ''} · Commandes directes WhatsApp
+                {(country === 'Autre' ? customCountry.trim() : country) ? `${country === 'Autre' ? (customCountry.trim() || 'Pays') : country} · ` : ''}{city === 'Autre' ? (customCity.trim() || 'Ville') : city}{quarter.trim() ? ` • ${quarter.trim()}` : ''} · Commandes directes WhatsApp
               </p>
               <p className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 truncate mt-0.5">
                 /boutique/{previewSlug || 'identifiant'}
@@ -498,8 +524,36 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               </p>
             </div>
 
-            {/* 3. Ville & Quartier */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 3. Pays, Ville & Quartier */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="store-country" className="block text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider mb-1.5">
+                  Pays *
+                </label>
+                <div className="relative">
+                  <Globe className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <select
+                    id="store-country"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-ink-200 dark:border-ink-700 text-xs text-ink-900 dark:text-white focus:outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 bg-warm-50/50 dark:bg-ink-950 cursor-pointer transition-colors"
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c} value={c} className="dark:bg-ink-900">{c}</option>
+                    ))}
+                  </select>
+                </div>
+                {country === 'Autre' && (
+                  <input
+                    type="text"
+                    placeholder="Précisez votre pays"
+                    value={customCountry}
+                    onChange={(e) => setCustomCountry(e.target.value)}
+                    className="mt-2 w-full px-3 py-2 rounded-xl border border-ink-200 dark:border-ink-700 text-xs text-ink-900 dark:text-white placeholder:text-ink-400 focus:outline-none focus:border-brand-600 bg-warm-50/50 dark:bg-ink-950"
+                  />
+                )}
+              </div>
+
               <div>
                 <label htmlFor="store-city" className="block text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider mb-1.5">
                   Ville *
@@ -514,6 +568,15 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                     <option key={c} value={c} className="dark:bg-ink-900">{c}</option>
                   ))}
                 </select>
+                {city === 'Autre' && (
+                  <input
+                    type="text"
+                    placeholder="Précisez votre ville"
+                    value={customCity}
+                    onChange={(e) => setCustomCity(e.target.value)}
+                    className="mt-2 w-full px-3 py-2 rounded-xl border border-ink-200 dark:border-ink-700 text-xs text-ink-900 dark:text-white placeholder:text-ink-400 focus:outline-none focus:border-brand-600 bg-warm-50/50 dark:bg-ink-950"
+                  />
+                )}
               </div>
 
               <div>
@@ -521,11 +584,13 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                   Quartier (optionnel)
                 </label>
                 <div className="relative">
-                  <MapPin className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <MapPin className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="store-quarter"
                     type="text"
-                    placeholder="Ex: Akwa, Mokolo, Deido..."
+                    placeholder="Nom du quartier..."
+                    autoComplete="off"
+                    spellCheck={false}
                     value={quarter}
                     onChange={(e) => setQuarter(e.target.value)}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-ink-200 dark:border-ink-700 text-xs text-ink-900 dark:text-white placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 bg-warm-50/50 dark:bg-ink-950 transition-colors"
