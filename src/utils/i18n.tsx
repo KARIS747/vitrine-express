@@ -164,7 +164,7 @@ export const translations: Record<Language, Translations> = {
       emptyStoresTitle: 'Les premières vitrines arrivent bientôt',
       emptyStoresText: 'Vous êtes commerçant ? Connectez-vous à votre espace pour mettre votre catalogue en ligne.',
       footerSubtitle: 'Vitrines WhatsApp pour les commerçants du Cameroun.',
-      footerDesignedBy: 'VitrineExpress • Tous droits réservés.',
+      footerDesignedBy: 'VitrineExpress, tous droits réservés.',
     },
     storefront: {
       searchPlaceholder: 'Rechercher un article...',
@@ -274,7 +274,7 @@ export const translations: Record<Language, Translations> = {
       emptyStoresTitle: 'First storefronts coming soon',
       emptyStoresText: 'Are you a merchant? Sign in to your dashboard to publish your catalog.',
       footerSubtitle: 'WhatsApp storefronts for local businesses in Cameroon.',
-      footerDesignedBy: 'VitrineExpress • All rights reserved.',
+      footerDesignedBy: 'VitrineExpress, all rights reserved.',
     },
     storefront: {
       searchPlaceholder: 'Search for an item...',
