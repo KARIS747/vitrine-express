@@ -163,7 +163,7 @@ export const translations: Record<Language, Translations> = {
       onlineStoresHeading: 'Boutiques en ligne',
       emptyStoresTitle: 'Les premières vitrines arrivent bientôt',
       emptyStoresText: 'Vous êtes commerçant ? Connectez-vous à votre espace pour mettre votre catalogue en ligne.',
-      footerSubtitle: 'Vitrines WhatsApp pour les commerçants du Cameroun.',
+      footerSubtitle: 'Vitrines WhatsApp pour les commerçants.',
       footerDesignedBy: 'VitrineExpress, tous droits réservés.',
     },
     storefront: {
@@ -273,7 +273,7 @@ export const translations: Record<Language, Translations> = {
       onlineStoresHeading: 'Online stores',
       emptyStoresTitle: 'First storefronts coming soon',
       emptyStoresText: 'Are you a merchant? Sign in to your dashboard to publish your catalog.',
-      footerSubtitle: 'WhatsApp storefronts for local businesses in Cameroon.',
+      footerSubtitle: 'WhatsApp storefronts for local businesses.',
       footerDesignedBy: 'VitrineExpress, all rights reserved.',
     },
     storefront: {
