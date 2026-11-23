@@ -132,8 +132,12 @@ Dans cet environnement (Linux, `mise` ou binaires locaux), toujours exécuter vi
 ```
 
 ### Déploiement Cloudflare Pages
-Le déploiement est automatisé via GitHub Actions / Cloudflare Pages Git Integration sur la branche `main`.
-Chaque push sur `origin/main` déclenche le build et le déploiement sur l'URL de production.
+- **Dépôt Git** : Synchronisé sur `main` via `git push origin main`.
+- **Mise en ligne de production (`vitrine-express.pages.dev`)** : Le projet Cloudflare Pages fonctionne en mode **Direct Upload** (Wrangler). Pousser sur GitHub archive le code, mais pour déployer la production en direct, il faut compiler et déployer via Wrangler :
+  ```bash
+  ./node_modules/.bin/vite build && ./node_modules/.bin/wrangler pages deploy dist --project-name=vitrine-express --branch=main
+  ```
+- Les fonctions serverless (`functions/`) et les en-têtes HTTP de sécurité (`dist/_headers`) sont uploadés et déployés automatiquement par cette commande.
 
 ---
 
