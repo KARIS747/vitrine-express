@@ -11,7 +11,7 @@ export interface SeoMetadata {
 
 const DEFAULT_METADATA: Required<SeoMetadata> = {
   title: 'VitrineExpress — Vitrines Produits & Commandes WhatsApp',
-  description: 'Scannez, découvrez et commandez : vitrines WhatsApp rapides et élégantes pour les commerçants du Cameroun.',
+  description: 'Scannez, découvrez et commandez : vitrines WhatsApp rapides et élégantes pour les commerçants.',
   canonicalPath: '/',
   image: '',
   type: 'website',

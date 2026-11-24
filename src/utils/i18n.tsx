@@ -126,7 +126,7 @@ export const translations: Record<Language, Translations> = {
       login: 'Se connecter',
       admin: 'Administration',
       searchPlaceholder: 'Rechercher un article...',
-      subTitle: 'Boutiques Cameroun',
+      subTitle: 'Vitrines en ligne',
     },
     landing: {
       tagline: 'Le commerce de proximité, en ligne',
@@ -236,7 +236,7 @@ export const translations: Record<Language, Translations> = {
       login: 'Sign in',
       admin: 'Admin',
       searchPlaceholder: 'Search for an item...',
-      subTitle: 'Stores Cameroon',
+      subTitle: 'Online storefronts',
     },
     landing: {
       tagline: 'Local commerce, made digital',

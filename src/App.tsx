@@ -112,7 +112,7 @@ export const App: React.FC = () => {
 
       if (!data) {
         setActiveStore(null);
-        setLoadError("Cette vitrine est introuvable, suspendue ou sa licence a expiré.");
+        setLoadError("Cette vitrine est actuellement indisponible ou introuvable.");
         return;
       }
 
@@ -222,7 +222,7 @@ export const App: React.FC = () => {
       window.history.pushState({}, '', '/');
       updatePageSeo({
         title: 'VitrineExpress — Vitrines Produits & Commandes WhatsApp',
-        description: 'Scannez, découvrez et commandez : vitrines WhatsApp rapides et élégantes pour les commerçants du Cameroun.',
+        description: 'Scannez, découvrez et commandez : vitrines WhatsApp rapides et élégantes pour les commerçants.',
         canonicalPath: '/',
       });
       void loadLandingStores();
