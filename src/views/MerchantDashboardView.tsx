@@ -24,8 +24,8 @@ import {
   Clock,
   ExternalLink,
   LogOut,
-  Mail,
   MessageCircle,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -57,6 +57,23 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (products.length > 0) return false;
+    try {
+      return localStorage.getItem(`ve_onboarding_${store.id}`) !== 'done';
+    } catch {
+      return false;
+    }
+  });
+
+  const dismissOnboarding = () => {
+    try {
+      localStorage.setItem(`ve_onboarding_${store.id}`, 'done');
+    } catch {
+      // silent
+    }
+    setShowOnboarding(false);
+  };
 
   useEffect(() => {
     dbService.getMerchantNotifications().then((res) => {
@@ -307,6 +324,128 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
           </div>
         </div>
 
+        {/* Onboarding Guide — first-time merchant */}
+        {showOnboarding && (
+          <div className="bg-white rounded-3xl border border-brand-200 shadow-subtle overflow-hidden">
+            <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-brand-100 bg-brand-50/60">
+              <div>
+                <p className="text-[11px] font-bold text-brand-700 uppercase tracking-widest mb-0.5">
+                  {language === 'fr' ? 'Guide de démarrage' : 'Getting started'}
+                </p>
+                <h2 className="font-display font-bold text-base sm:text-lg text-ink-950">
+                  {language === 'fr'
+                    ? 'Bienvenue dans votre espace gérant'
+                    : 'Welcome to your merchant space'}
+                </h2>
+                <p className="text-xs text-ink-500 mt-0.5 max-w-lg">
+                  {language === 'fr'
+                    ? 'Suivez ces 3 étapes pour mettre en ligne votre vitrine en moins de 5 minutes.'
+                    : 'Follow these 3 steps to publish your storefront in under 5 minutes.'}
+                </p>
+              </div>
+              <button
+                onClick={dismissOnboarding}
+                className="p-1.5 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-brand-100 transition-colors cursor-pointer shrink-0 ml-4"
+                title={language === 'fr' ? 'Fermer le guide' : 'Close guide'}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-ink-100">
+              {/* Step 1 */}
+              <div className="p-5 flex flex-col gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-brand-700 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                    1
+                  </span>
+                  <span className="font-display font-semibold text-sm text-ink-950">
+                    {language === 'fr' ? 'Créez vos catégories' : 'Create your categories'}
+                  </span>
+                </div>
+                <p className="text-xs text-ink-500 leading-relaxed">
+                  {language === 'fr'
+                    ? 'Regroupez vos articles par famille : vêtements, chaussures, accessoires… Les catégories aident vos clients à naviguer rapidement.'
+                    : 'Group your items by type: clothing, shoes, accessories… Categories help customers navigate quickly.'}
+                </p>
+                <button
+                  onClick={() => { dismissOnboarding(); setIsCategoryModalOpen(true); }}
+                  className="mt-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs self-start"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  {language === 'fr' ? 'Ouvrir les catégories' : 'Open categories'}
+                </button>
+              </div>
+
+              {/* Step 2 */}
+              <div className="p-5 flex flex-col gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-ink-800 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                    2
+                  </span>
+                  <span className="font-display font-semibold text-sm text-ink-950">
+                    {language === 'fr' ? 'Ajoutez vos articles' : 'Add your items'}
+                  </span>
+                </div>
+                <p className="text-xs text-ink-500 leading-relaxed">
+                  {language === 'fr'
+                    ? 'Renseignez le nom, le prix, une photo et l\'état du stock (en rayon ou en arrivage). Vos clients voient tout en temps réel.'
+                    : 'Enter a name, price, photo and stock status. Your customers see everything in real time.'}
+                </p>
+                <button
+                  onClick={() => { dismissOnboarding(); setIsAddModalOpen(true); }}
+                  className="mt-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-ink-950 hover:bg-black text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs self-start"
+                >
+                  <Plus className="w-3.5 h-3.5 text-brand-400" />
+                  {language === 'fr' ? 'Ajouter un article' : 'Add an item'}
+                </button>
+              </div>
+
+              {/* Step 3 */}
+              <div className="p-5 flex flex-col gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-ink-300 text-ink-700 text-[11px] font-bold flex items-center justify-center shrink-0">
+                    3
+                  </span>
+                  <span className="font-display font-semibold text-sm text-ink-950">
+                    {language === 'fr' ? 'Partagez votre vitrine' : 'Share your storefront'}
+                  </span>
+                </div>
+                <p className="text-xs text-ink-500 leading-relaxed">
+                  {language === 'fr'
+                    ? 'Copiez votre lien et collez-le dans votre statut WhatsApp, ou imprimez le QR code à afficher en boutique.'
+                    : 'Copy your link and paste it on your WhatsApp status, or print the QR code to display in-store.'}
+                </p>
+                <div className="mt-auto flex flex-wrap gap-2">
+                  <button
+                    onClick={() => { void handleCopyStoreLink(); }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    {language === 'fr' ? 'Copier le lien' : 'Copy link'}
+                  </button>
+                  <button
+                    onClick={() => { dismissOnboarding(); setIsQRModalOpen(true); }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-ink-200 hover:bg-warm-100 text-ink-800 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                  >
+                    <QrCode className="w-3.5 h-3.5 text-brand-700" />
+                    {language === 'fr' ? 'QR Code' : 'QR Code'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-ink-100 bg-warm-50/50 flex justify-end">
+              <button
+                onClick={dismissOnboarding}
+                className="text-xs text-ink-400 hover:text-ink-700 font-medium transition-colors cursor-pointer"
+              >
+                {language === 'fr' ? 'J\'ai compris, ne plus afficher ce guide' : 'Got it, hide this guide'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Quota & Statistics Strip */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Strict 20 Products Quota Gauge */}
@@ -367,13 +506,6 @@ export const MerchantDashboardView: React.FC<MerchantDashboardViewProps> = ({
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
                     <span>WhatsApp</span>
-                  </a>
-                  <a
-                    href={`mailto:karisdev369@gmail.com?subject=${encodeURIComponent(`Demande Plan Pro - ${store.name}`)}&body=${encodeURIComponent(`Bonjour,\n\nJe suis le gérant de la boutique ${store.name} (Slug: ${store.slug}, Tel: ${store.whatsapp_number}).\n\nJ'ai atteint mon quota actuel de ${maxProducts} produits et je souhaite souscrire au Plan Pro.\n\nMerci !`)}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-200 bg-white hover:bg-warm-100 text-ink-800 text-xs font-semibold shadow-xs transition-colors"
-                  >
-                    <Mail className="w-3.5 h-3.5 text-ink-500" />
-                    <span>Email</span>
                   </a>
                 </div>
               </div>
