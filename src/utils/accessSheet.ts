@@ -6,7 +6,7 @@ import { planFromQuota, planLabel } from './plans';
 
 interface StoreAccessSheetInput {
   store: Store;
-  licenseKey: string;
+  licenseKey?: string;
   pinCode?: string | null;
   expiresAt?: string | null;
   storeUrl?: string;
@@ -83,7 +83,7 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
   const generatedAt = new Date();
   const expiryDate = formatDate(expiresAt ?? store.expires_at) || 'Non définie';
-  const location = [store.city, store.quarter].filter(Boolean).join(', ') || 'Cameroun';
+  const location = [store.country, store.city, store.quarter].filter(Boolean).join(', ') || store.city || 'Non renseigné';
   const isExpired = (() => {
     const expiry = new Date(expiresAt ?? store.expires_at).getTime();
     return Number.isFinite(expiry) && expiry <= Date.now();
@@ -111,7 +111,7 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...BRAND_LIGHT);
-  doc.text('Boutiques Cameroun', MARGIN + 19, 28.5);
+  doc.text('Vitrines professionnelles', MARGIN + 19, 28.5);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
@@ -147,7 +147,7 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(...RED);
-    doc.text('LICENCE EXPIRÉE', PAGE_WIDTH - MARGIN, 62, { align: 'right' });
+    doc.text('ABONNEMENT EXPIRÉ', PAGE_WIDTH - MARGIN, 62, { align: 'right' });
   }
 
   const linkY = 76;
@@ -199,27 +199,27 @@ export async function downloadStoreAccessPdf(input: StoreAccessSheetInput): Prom
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.8);
   doc.setTextColor(...MUTED);
-  doc.text('NUMÉRO WHATSAPP', leftX, credY + 10);
+  doc.text('NOM DE LA BOUTIQUE (IDENTIFIANT)', leftX, credY + 10);
 
-  doc.setFont('courier', 'bold');
-  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
   doc.setTextColor(...INK);
-  doc.text(store.whatsapp_number || 'Non renseigné', leftX, credY + 17, { maxWidth: 85 });
+  doc.text(truncateToWidth(doc, store.name, 90), leftX, credY + 17, { maxWidth: 90 });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.8);
   doc.setTextColor(...MUTED);
-  doc.text('CLÉ DE LICENCE', leftX, credY + 27);
+  doc.text('NUMÉRO WHATSAPP ASSOCIE', leftX, credY + 27);
 
   doc.setFont('courier', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...INK);
-  doc.text(licenseKey || 'Non disponible', leftX, credY + 34, { maxWidth: 92 });
+  doc.text(store.whatsapp_number || 'Non renseigné', leftX, credY + 34, { maxWidth: 92 });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.8);
   doc.setTextColor(...MUTED);
-  doc.text('ESPACE GÉRANT', leftX, credY + 45);
+  doc.text('CONNEXION ESPACE GÉRANT', leftX, credY + 45);
 
   doc.setFont('courier', 'normal');
   doc.setFontSize(7.8);

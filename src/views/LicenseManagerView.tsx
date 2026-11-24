@@ -126,7 +126,7 @@ async function copyText(text: string, successMessage: string) {
   }
 }
 
-function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: string) {
+function buildOnboardingMessage(store: Store, _licenseKey?: string, pinCode?: string) {
   const plan = store.plan ?? planFromQuota(store.max_products);
   const lines = [
     `Bonjour, votre vitrine ${store.name} est activée sur VitrineExpress.`,
@@ -135,10 +135,8 @@ function buildOnboardingMessage(store: Store, licenseKey?: string, pinCode?: str
     `Espace de gestion : ${window.location.origin}/merchant`,
     '',
     'Identifiants d\'accès commerçant :',
-    `Nom de la boutique : ${store.name}`,
-    `Numéro WhatsApp : ${store.whatsapp_number}`,
+    `Identifiant : ${store.name} (ou ${store.whatsapp_number})`,
   ];
-  if (licenseKey) lines.push(`Clé de licence : ${licenseKey}`);
   if (pinCode) lines.push(`Code PIN secret : ${pinCode}`);
   lines.push(
     '',
