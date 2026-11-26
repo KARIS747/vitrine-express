@@ -1,28 +1,20 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Store } from '../types';
 import { extractStoreSlug } from '../utils/storeLink';
 import { toast } from 'sonner';
 import { useLanguage } from '../utils/i18n';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
-import { HeroLiveDemo } from '../components/landing/HeroLiveDemo';
-import { BentoShowcase } from '../components/landing/BentoShowcase';
-import { PricingSection } from '../components/landing/PricingSection';
+import { formatFCFA } from '../utils/formatters';
+import { PLAN_IDS, PLANS, PROMO_CODES } from '../utils/plans';
 import {
-  ArrowRight,
-  ChevronDown,
   Loader2,
   LockKeyhole,
   MapPin,
-  MessageCircle,
   QrCode,
   ScanLine,
   Search,
-  ShoppingBag,
-  Sparkles,
   Store as StoreIcon,
   UserRound,
-  Zap,
 } from 'lucide-react';
 
 const QRScannerModal = lazy(() =>
@@ -30,16 +22,16 @@ const QRScannerModal = lazy(() =>
 );
 
 const ScannerFallback: React.FC = () => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/80 p-4 backdrop-blur-xs">
-    <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-ink-900 px-5 py-3.5 text-xs font-medium text-white shadow-2xl">
-      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-ledger-ink/80 p-4">
+    <div className="flex items-center gap-2 rounded-md border border-ledger-line bg-ledger-ink px-4 py-3 text-xs font-medium text-ledger-surface">
+      <Loader2 className="h-4 w-4 animate-spin text-ledger-brass" />
       Ouverture du scanner...
     </div>
   </div>
 );
 
 const FOCUS =
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500';
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green';
 
 interface LandingViewProps {
   stores: Store[];
@@ -66,37 +58,35 @@ const StoreCard: React.FC<{
       type="button"
       onClick={onOpen}
       disabled={isDisabled}
-      className={`group flex flex-col overflow-hidden rounded-3xl border border-ink-200/80 bg-white text-left shadow-subtle transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/60 hover:shadow-elevated disabled:cursor-wait dark:border-ink-800 dark:bg-ink-900 ${FOCUS}`}
+      className={`group flex flex-col overflow-hidden rounded-md border border-ledger-line bg-ledger-surface text-left transition-colors hover:border-ledger-green disabled:cursor-wait ${FOCUS}`}
     >
-      <div className="relative h-36 overflow-hidden bg-gradient-to-br from-[#083022] via-[#0B4632] to-[#065F46]">
+      <div className="relative h-28 bg-ledger-green">
         {store.banner_url && (
           <img
             src={store.banner_url}
             alt=""
             loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover opacity-80 transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover opacity-75"
             onError={(event) => {
               event.currentTarget.style.display = 'none';
             }}
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-950/75 via-ink-950/20 to-transparent" />
-
-        <span className="absolute left-3.5 top-3.5 inline-flex items-center gap-1.5 rounded-full bg-ink-950/75 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ledger-ink/55 to-transparent" />
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-sm border border-ledger-surface/30 bg-ledger-ink/80 px-2 py-1 font-ledger-mono text-[10px] text-ledger-surface">
+          <span className="h-1.5 w-1.5 bg-ledger-green" />
           {onlineLabel}
         </span>
-
         {productCount > 0 && (
-          <span className="absolute right-3.5 top-3.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-ink-950 backdrop-blur-md">
+          <span className="absolute right-3 top-3 rounded-sm border border-ledger-surface/30 bg-ledger-ink/80 px-2 py-1 font-ledger-mono text-[10px] text-ledger-surface">
             {productCount} article{productCount > 1 ? 's' : ''}
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
-        <div className="flex items-start gap-3.5">
-          <div className="relative -mt-10 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white bg-emerald-50 font-display text-xl font-extrabold text-emerald-700 shadow-card dark:border-ink-900 dark:bg-emerald-950 dark:text-emerald-300">
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-start gap-3">
+          <div className="relative -mt-8 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border border-ledger-line bg-ledger-paper font-registry text-lg text-ledger-green">
             {store.name.charAt(0).toUpperCase()}
             {store.logo_url && (
               <img
@@ -110,29 +100,23 @@ const StoreCard: React.FC<{
               />
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate font-display text-lg font-bold text-ink-950 transition-colors group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
-              {store.name}
-            </h3>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-500 dark:text-ink-400">
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <div className="min-w-0 flex-1 pt-1">
+            <h3 className="truncate font-registry text-base text-ledger-ink">{store.name}</h3>
+            <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ledger-muted">
+              <MapPin className="h-3 w-3 shrink-0 text-ledger-green" />
               <span className="truncate">{location || 'Cameroun'}</span>
             </p>
           </div>
         </div>
-
-        <p className="mt-3.5 line-clamp-2 min-h-[2.5rem] text-xs leading-relaxed text-ink-600 dark:text-ink-300">
+        <p className="mt-3 line-clamp-2 min-h-[2.25rem] text-xs leading-relaxed text-ledger-muted">
           {store.tagline || store.description || fallbackDescription}
         </p>
-
-        <div className="mt-4 flex items-center justify-between border-t border-ink-100 pt-3.5 text-xs font-bold text-emerald-700 dark:border-ink-800 dark:text-emerald-400">
+        <div className="mt-auto flex items-center justify-between border-t border-ledger-line pt-3 text-xs font-semibold text-ledger-green">
           <span>{viewLabel}</span>
           {isOpening ? (
-            <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-ledger-green" />
           ) : (
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 transition-transform group-hover:translate-x-0.5 group-hover:bg-emerald-600 group-hover:text-white dark:bg-emerald-950 dark:text-emerald-300">
-              <ArrowRight className="h-3.5 w-3.5" />
-            </span>
+            <span className="font-ledger-mono text-[10px] text-ledger-muted">/</span>
           )}
         </div>
       </div>
@@ -155,12 +139,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
   const [linkError, setLinkError] = useState<string | null>(null);
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
   const [storeFilter, setStoreFilter] = useState('');
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const openStore = async (slug: string) => {
     setPendingSlug(slug);
     setLinkError(null);
-
     try {
       const opened = await onOpenStoreBySlug(slug);
       if (!opened) {
@@ -178,12 +160,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
   const handleLinkSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     const slug = extractStoreSlug(linkInput);
-
     if (!slug) {
       setLinkError(t.landing.invalidLinkError);
       return;
     }
-
     void openStore(slug);
   };
 
@@ -203,272 +183,148 @@ export const LandingView: React.FC<LandingViewProps> = ({
   const filteredStores = useMemo(() => {
     const query = storeFilter.trim().toLowerCase();
     if (!query) return stores;
-    return stores.filter((s) =>
-      [s.name, s.city, s.quarter, s.tagline].some((field) =>
+    return stores.filter((store) =>
+      [store.name, store.city, store.quarter, store.tagline].some((field) =>
         String(field ?? '').toLowerCase().includes(query),
       ),
     );
   }, [stores, storeFilter]);
 
-  const steps = isFr
-    ? [
-        {
-          number: '01',
-          icon: Zap,
-          title: 'Créez votre boutique en 60s',
-          desc: 'Renseignez le nom, votre numéro WhatsApp et un code PIN. Votre lien public est généré à la seconde.',
-        },
-        {
-          number: '02',
-          icon: ShoppingBag,
-          title: 'Ajoutez vos produits & prix',
-          desc: 'Prenez une photo, fixez le prix en FCFA et indiquez le stock ou la date de prochain arrivage.',
-        },
-        {
-          number: '03',
-          icon: MessageCircle,
-          title: 'Partagez & encaissez sur WhatsApp',
-          desc: 'Postez votre lien en statut ou imprimez votre affiche QR. Vos clients vous envoient des commandes propres.',
-        },
-      ]
-    : [
-        {
-          number: '01',
-          icon: Zap,
-          title: 'Launch your store in 60s',
-          desc: 'Enter your shop name, WhatsApp number, and a secret PIN. Your public link goes live instantly.',
-        },
-        {
-          number: '02',
-          icon: ShoppingBag,
-          title: 'Add products & prices',
-          desc: 'Upload photos, set prices, and mark availability or upcoming restock dates.',
-        },
-        {
-          number: '03',
-          icon: MessageCircle,
-          title: 'Share & get orders on WhatsApp',
-          desc: 'Put your link on your bio/status or print your QR poster. Receive clean, structured orders.',
-        },
-      ];
+  const stepTitles = [t.landing.step1Title, t.landing.step2Title, t.landing.step3Title];
+  const stepDescriptions = [t.landing.step1Desc, t.landing.step2Desc, t.landing.step3Desc];
 
-  const faqs = isFr
+  const faqCopy = isFr
     ? [
         {
-          q: 'Ai-je besoin de compétences techniques ou d’un ordinateur ?',
-          a: 'Non. Tout se fait depuis votre téléphone en moins d’une minute : création de la boutique, ajout de photos, modification des prix et téléchargement de votre affiche QR.',
+          question: 'Ai-je besoin de compétences techniques ou d’un ordinateur ?',
+          answer:
+            'Non. Tout se fait depuis votre téléphone : créer la boutique, ajouter des photos, modifier les prix et télécharger votre affiche QR.',
         },
         {
-          q: 'Prenez-vous une commission sur mes ventes ?',
-          a: 'Jamais. 0% de commission. Vos clients vous commandent directement sur votre WhatsApp et vous paient selon vos moyens habituels (MTN MoMo, Orange Money, espèces, virement).',
+          question: 'Prenez-vous une commission sur mes ventes ?',
+          answer:
+            'Jamais. Vos clients vous envoient leurs commandes sur WhatsApp et vous réglez directement avec eux.',
         },
         {
-          q: 'Combien coûte l’ouverture d’une boutique ?',
-          a: 'Le plan Découverte est totalement gratuit (jusqu’à 8 articles) sans limite de temps et sans carte bancaire. Vous pouvez passer au plan Pro (8 000 FCFA/an) ou Premium (20 000 FCFA/an) quand votre catalogue grandit.',
-        },
-        {
-          q: 'Comment mes clients accèdent-ils à ma vitrine ?',
-          a: 'Par votre lien personnalisé (ex: vitrine-express.pages.dev/boutique/ma-boutique) ou en scannant votre affiche QR code. Ils n’ont aucune application à installer.',
+          question: 'Combien coûte l’ouverture d’une boutique ?',
+          answer: `Le plan Découverte est gratuit jusqu’à ${PLANS.decouverte.maxProducts} articles. Pro coûte ${formatFCFA(PLANS.pro.price, 'fr')} par an et Premium ${formatFCFA(PLANS.premium.price, 'fr')}.`,
         },
       ]
     : [
         {
-          q: 'Do I need technical skills or a laptop?',
-          a: 'Not at all. Everything runs smoothly from your smartphone in under a minute: create your shop, upload photos, update prices, and download your QR poster.',
+          question: 'Do I need technical skills or a laptop?',
+          answer:
+            'No. Everything happens on your phone: create the store, add photos, update prices, and download your QR poster.',
         },
         {
-          q: 'Do you charge any commission on my sales?',
-          a: 'Never. 0% commission. Customers send orders straight to your WhatsApp and pay you directly using your preferred methods.',
+          question: 'Do you charge a commission on sales?',
+          answer:
+            'Never. Customers send orders to your WhatsApp and settle payment directly with you.',
         },
         {
-          q: 'How much does it cost to start?',
-          a: 'The Découverte plan is completely free forever (up to 8 items) with no credit card needed. Upgrade to Pro (8,000 FCFA/year) or Premium (20,000 FCFA/year) whenever your catalog expands.',
-        },
-        {
-          q: 'How do shoppers open my storefront?',
-          a: 'Via your custom link or by scanning your printed QR code poster. No app download or customer account is required.',
+          question: 'How much does it cost to start?',
+          answer: `The Découverte plan is free up to ${PLANS.decouverte.maxProducts} items. Pro costs ${formatFCFA(PLANS.pro.price, 'en')} per year and Premium ${formatFCFA(PLANS.premium.price, 'en')}.`,
         },
       ];
 
   const isPending = pendingSlug !== null;
   const featuredStore = stores[0];
+  const ticketName = featuredStore?.name ?? (isFr ? 'Boutique Douala' : 'Douala Store');
+  const ticketCity = featuredStore?.city ?? 'Cameroun';
+  const ticketProducts = featuredStore?.current_products_count ?? PLANS.decouverte.maxProducts;
   const storeCountLabel = isFr
     ? `${stores.length} boutique${stores.length > 1 ? 's' : ''} en ligne`
     : `${stores.length} store${stores.length > 1 ? 's' : ''} online`;
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col bg-[#F7F6F2] text-ink-950 transition-colors dark:bg-ink-950 dark:text-ink-100">
-      {/* =========================================================
-          1. HERO SHOWCASE (Deep Emerald Obsidian Canvas)
-         ========================================================= */}
-      <section className="relative overflow-hidden bg-[#061510] pb-24 pt-12 text-white sm:pb-28 sm:pt-16 lg:pt-20">
-        {/* Subtle architectural grid & radial glows */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)',
-            backgroundSize: '44px 44px',
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-24 top-0 h-[420px] w-[420px] rounded-full bg-emerald-500/20 blur-[120px]"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-24 bottom-0 h-[380px] w-[380px] rounded-full bg-amber-400/15 blur-[120px]"
-        />
-
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(340px,0.92fr)] lg:gap-14">
-          {/* Left Hero Copy */}
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="max-w-2xl"
-          >
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-200 backdrop-blur-sm">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-              <span>
-                {isFr
-                  ? 'Vitrines WhatsApp nouvelle génération • 0% de commission'
-                  : 'Next-gen WhatsApp storefronts • 0% commission'}
-              </span>
-            </div>
-
-            <h1 className="mt-6 font-display text-[2.45rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[3.7rem]">
-              {isFr ? (
-                <>
-                  Transformez votre WhatsApp en{' '}
-                  <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-amber-300 bg-clip-text text-transparent">
-                    boutique qui vend 24h/24.
-                  </span>
-                </>
-              ) : (
-                <>
-                  Turn your WhatsApp into a{' '}
-                  <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-amber-300 bg-clip-text text-transparent">
-                    24/7 selling storefront.
-                  </span>
-                </>
-              )}
+    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col bg-ledger-surface font-ledger text-ledger-ink">
+      <section className="border-b border-ledger-line">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-center lg:gap-16 lg:py-20">
+          <div className="max-w-2xl">
+            <p className="border-l-2 border-ledger-green pl-3 text-sm text-ledger-green">
+              {t.landing.tagline}
+            </p>
+            <h1 className="mt-6 font-registry text-[2.6rem] leading-[1.06] tracking-[-0.03em] text-ledger-ink sm:text-5xl lg:text-[3.65rem]">
+              <span className="block">{t.landing.heroTitle}</span>
+              <span className="block">{t.landing.heroHighlight}</span>
             </h1>
-
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-emerald-100/80 sm:text-lg">
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-ledger-muted">
               {t.landing.heroDescription}
             </p>
-
-            {/* Primary CTA Cluster */}
-            <div className="mt-8 flex flex-wrap items-center gap-3.5">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={onCreateStore}
-                className={`group inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_32px_-8px_rgba(16,185,129,0.55)] transition-all hover:-translate-y-0.5 hover:from-emerald-400 hover:to-emerald-500 ${FOCUS}`}
+                className={`min-h-11 rounded-md bg-ledger-green px-5 py-3 text-sm font-semibold text-ledger-surface transition-colors hover:bg-ledger-ink ${FOCUS}`}
               >
-                <Sparkles className="h-4 w-4 text-amber-200" />
-                <span>{t.landing.ctaCreateStore}</span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                {t.landing.ctaCreateStore}
               </button>
-
               <a
                 href="#boutiques"
-                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:border-emerald-400/50 hover:bg-white/10 ${FOCUS}`}
+                className={`min-h-11 rounded-md border border-ledger-line px-5 py-3 text-sm font-semibold text-ledger-ink transition-colors hover:border-ledger-green hover:bg-ledger-paper ${FOCUS}`}
               >
-                <StoreIcon className="h-4 w-4 text-emerald-300" />
-                <span>{t.landing.ctaDiscover}</span>
-                {stores.length > 0 && (
-                  <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[11px] font-bold text-emerald-200">
-                    {stores.length}
-                  </span>
-                )}
+                {t.landing.ctaDiscover}
               </a>
             </div>
+          </div>
 
-            <div className="mt-4">
-              <button
-                type="button"
-                onClick={onMerchantLogin}
-                className={`inline-flex items-center gap-1.5 text-xs font-medium text-emerald-200/80 transition-colors hover:text-white ${FOCUS}`}
-              >
-                <LockKeyhole className="h-3.5 w-3.5 text-emerald-400" />
-                <span>
-                  {isFr ? 'Vous avez déjà une boutique ? Accéder à l’espace gérant →' : 'Already have a store? Open merchant portal →'}
-                </span>
-              </button>
+          <div className="mx-auto w-full max-w-md">
+            <div className="border border-ledger-line bg-ledger-paper p-5 shadow-[6px_6px_0_#D6DCD2] sm:p-6">
+              <div className="flex items-start justify-between gap-4 border-b border-ledger-line pb-4">
+                <div>
+                  <p className="font-ledger-mono text-[11px] tracking-[0.08em] text-ledger-green">
+                    {isFr ? 'Vitrine en ligne' : 'Online store'}
+                  </p>
+                  <p className="mt-2 font-registry text-2xl leading-tight text-ledger-ink">
+                    {ticketName}
+                  </p>
+                </div>
+                <QrCode className="h-10 w-10 shrink-0 text-ledger-ink" strokeWidth={1.5} />
+              </div>
+              <div className="mt-4 space-y-2 text-sm text-ledger-muted">
+                <div className="flex items-baseline justify-between gap-4">
+                  <span>{isFr ? 'Catalogue' : 'Catalog'}</span>
+                  <span className="font-ledger-mono text-ledger-ink">
+                    {ticketProducts} {isFr ? 'articles' : 'items'}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <span>{isFr ? 'Emplacement' : 'Location'}</span>
+                  <span className="font-ledger-mono text-ledger-ink">{ticketCity}</span>
+                </div>
+              </div>
+              <div className="mt-5 border-t border-dashed border-ledger-line pt-4">
+                <p className="font-registry text-lg text-ledger-green">
+                  {t.storefront.orderWhatsApp}
+                </p>
+                <p className="mt-1 text-xs text-ledger-muted">
+                  {isFr ? 'Le message est déjà prêt.' : 'The message is already ready.'}
+                </p>
+              </div>
             </div>
-
-            {/* Crisp Metrics Strip */}
-            <div className="mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-white/10 pt-6">
-              <div>
-                <p className="font-display text-2xl font-extrabold text-white sm:text-3xl">60s</p>
-                <p className="mt-0.5 text-xs text-emerald-200/75">
-                  {isFr ? 'Pour être en ligne' : 'To launch live'}
-                </p>
-              </div>
-              <div>
-                <p className="font-display text-2xl font-extrabold text-amber-300 sm:text-3xl">0 FCFA</p>
-                <p className="mt-0.5 text-xs text-emerald-200/75">
-                  {isFr ? 'Plan Découverte' : 'Starter plan'}
-                </p>
-              </div>
-              <div>
-                <p className="font-display text-2xl font-extrabold text-emerald-400 sm:text-3xl">0%</p>
-                <p className="mt-0.5 text-xs text-emerald-200/75">
-                  {isFr ? 'Commission / vente' : 'Sales commission'}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Right Hero Interactive Simulator */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.12 }}
-          >
-            <HeroLiveDemo
-              storeName={featuredStore?.name}
-              storeCity={featuredStore?.city}
-              language={language}
-              onCreateStore={onCreateStore}
-            />
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* =========================================================
-          2. FLOATING CLIENT ACCESS DOCK (QR + Link + Quick Pills)
-         ========================================================= */}
-      <section className="relative z-20 mx-auto -mt-12 w-full max-w-5xl px-4 sm:px-6">
-        <div className="rounded-3xl border border-ink-200/90 bg-white p-5 shadow-elevated dark:border-ink-800 dark:bg-ink-900 sm:p-6">
-          <div className="grid gap-4 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)] md:items-center md:gap-8">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                <QrCode className="h-6 w-6" />
-              </div>
-              <div>
-                <h2 className="font-display text-base font-bold text-ink-950 dark:text-white">
-                  {t.landing.clientAccessHeading}
-                </h2>
-                <p className="mt-0.5 text-xs text-ink-500 dark:text-ink-400">
-                  {t.landing.scanQrSub}
-                </p>
-              </div>
+      <section className="border-b border-ledger-line bg-ledger-paper">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+          <div className="grid gap-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:items-center md:gap-8">
+            <div>
+              <p className="font-registry text-lg text-ledger-ink">
+                {t.landing.clientAccessHeading}
+              </p>
+              <p className="mt-0.5 text-xs text-ledger-muted">{t.landing.scanQrSub}</p>
             </div>
-
-            <div className="flex flex-col gap-2.5 sm:flex-row">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={() => setIsScannerOpen(true)}
-                className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-ink-950 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 dark:bg-white dark:text-ink-950 dark:hover:bg-emerald-400 ${FOCUS}`}
+                className={`min-h-11 inline-flex items-center justify-center gap-2 rounded-md border border-ledger-ink bg-ledger-ink px-4 py-2.5 text-sm font-semibold text-ledger-surface transition-colors hover:bg-ledger-green ${FOCUS}`}
               >
                 <ScanLine className="h-4 w-4" />
-                <span>{t.landing.scanQrBtn}</span>
+                {t.landing.scanQrBtn}
               </button>
-
-              <form onSubmit={handleLinkSubmit} className="flex min-w-0 flex-1 gap-2">
+              <form onSubmit={handleLinkSubmit} className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
                   value={linkInput}
@@ -478,152 +334,100 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   }}
                   placeholder={t.landing.pasteLinkPlaceholder}
                   aria-label={t.landing.pasteLinkPlaceholder}
-                  className={`min-h-11 min-w-0 flex-1 rounded-xl border border-ink-200 bg-ink-50/70 px-3.5 text-sm text-ink-950 placeholder:text-ink-400 dark:border-ink-700 dark:bg-ink-950 dark:text-white ${FOCUS}`}
+                  className={`min-h-11 min-w-0 flex-1 rounded-md border border-ledger-line bg-ledger-surface px-3 text-sm text-ledger-ink placeholder:text-ledger-muted ${FOCUS}`}
                 />
                 <button
                   type="submit"
                   disabled={isPending}
-                  className={`min-h-11 shrink-0 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60 ${FOCUS}`}
+                  className={`min-h-11 rounded-md border border-ledger-line bg-ledger-surface px-4 py-2.5 text-sm font-semibold text-ledger-ink transition-colors hover:border-ledger-green disabled:opacity-60 ${FOCUS}`}
                 >
-                  {isPending ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : t.landing.openStoreBtn}
+                  {isPending ? (
+                    <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                  ) : (
+                    t.landing.openStoreBtn
+                  )}
                 </button>
               </form>
             </div>
           </div>
-
           {linkError && (
-            <p role="alert" className="mt-3 text-xs font-medium text-rose-600 dark:text-rose-400">
+            <p role="alert" className="mt-3 text-sm text-ledger-red">
               {linkError}
             </p>
           )}
-
-          {stores.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink-100 pt-3.5 dark:border-ink-800">
-              <span className="text-[11px] font-semibold text-ink-400 dark:text-ink-500">
-                {isFr ? 'Accès rapide :' : 'Quick access:'}
-              </span>
-              {stores.slice(0, 4).map((store) => (
-                <button
-                  key={store.id}
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => void openStore(store.slug)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-ink-50 px-3 py-1 text-xs font-semibold text-ink-800 transition-colors hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-800 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-200 dark:hover:border-emerald-500"
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span>{store.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </section>
 
-      {/* =========================================================
-          3. HOW IT WORKS (3-Step Visual Flow)
-         ========================================================= */}
-      <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
-            {isFr ? 'Simple du début à la fin' : 'Effortless from start to finish'}
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-ink-950 dark:text-white sm:text-4xl">
-            {isFr
-              ? 'En ligne en 3 étapes, sans aucun casse-tête.'
-              : 'Live in 3 simple steps.'}
+      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
+        <div className="max-w-2xl">
+          <p className="text-sm text-ledger-green">{t.landing.stepsSubtitle}</p>
+          <h2 className="mt-3 font-registry text-3xl leading-tight tracking-[-0.02em] text-ledger-ink sm:text-4xl">
+            {t.landing.stepsTitle}
           </h2>
+          <p className="mt-4 text-sm leading-relaxed text-ledger-muted">
+            {t.landing.stepsDescription}
+          </p>
         </div>
-
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {steps.map((step, idx) => {
-            const Icon = step.icon;
-            return (
-              <motion.div
-                key={step.number}
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.35, delay: idx * 0.08 }}
-                className="relative rounded-3xl border border-ink-200/80 bg-white p-6 shadow-subtle dark:border-ink-800 dark:bg-ink-900"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <span className="font-display text-3xl font-extrabold text-ink-200 dark:text-ink-800">
-                    {step.number}
-                  </span>
-                </div>
-                <h3 className="mt-5 font-display text-lg font-bold text-ink-950 dark:text-white">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-600 dark:text-ink-300">
-                  {step.desc}
+        <ol className="mt-10 grid gap-8 border-t border-ledger-line pt-6 sm:grid-cols-3">
+          {stepTitles.map((title, index) => (
+            <li key={title} className="flex gap-4">
+              <span className="font-registry text-3xl leading-none text-ledger-brass">
+                0{index + 1}
+              </span>
+              <div>
+                <h3 className="font-registry text-base text-ledger-ink">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ledger-muted">
+                  {stepDescriptions[index]}
                 </p>
-              </motion.div>
-            );
-          })}
-        </div>
+              </div>
+            </li>
+          ))}
+        </ol>
       </section>
 
-      {/* =========================================================
-          4. BEFORE / AFTER & BENTO FEATURE SHOWCASE
-         ========================================================= */}
-      <BentoShowcase language={language} onCreateStore={onCreateStore} />
-
-      {/* =========================================================
-          5. LIVE STORES DIRECTORY (#boutiques)
-         ========================================================= */}
-      <section id="boutiques" className="mt-20 border-y border-ink-200/70 bg-white/60 py-20 dark:border-ink-800 dark:bg-ink-900/30">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <section id="boutiques" className="border-y border-ledger-line bg-ledger-paper/40">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
-                {t.landing.discoverTitle}
-              </p>
-              <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-ink-950 dark:text-white sm:text-4xl">
+              <p className="text-sm text-ledger-green">{t.landing.discoverTitle}</p>
+              <h2 className="mt-3 font-registry text-3xl leading-tight tracking-[-0.02em] text-ledger-ink sm:text-4xl">
                 {t.landing.onlineStoresHeading}
               </h2>
             </div>
-
             <div className="flex flex-wrap items-center gap-3">
-              {stores.length > 3 && (
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
-                  <input
-                    type="search"
-                    value={storeFilter}
-                    onChange={(e) => setStoreFilter(e.target.value)}
-                    placeholder={isFr ? 'Filtrer par nom ou ville...' : 'Filter by name or city...'}
-                    className={`h-9 rounded-xl border border-ink-200 bg-white pl-8 pr-3 text-xs text-ink-900 placeholder:text-ink-400 dark:border-ink-700 dark:bg-ink-900 dark:text-white ${FOCUS}`}
-                  />
-                </div>
-              )}
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ledger-muted" />
+                <input
+                  type="search"
+                  value={storeFilter}
+                  onChange={(event) => setStoreFilter(event.target.value)}
+                  placeholder={isFr ? 'Rechercher une boutique' : 'Search a store'}
+                  aria-label={isFr ? 'Rechercher une boutique' : 'Search a store'}
+                  className={`min-h-11 w-full rounded-md border border-ledger-line bg-ledger-surface pl-9 pr-3 text-sm text-ledger-ink placeholder:text-ledger-muted sm:w-56 ${FOCUS}`}
+                />
+              </label>
+              <span className="inline-flex items-center gap-2 rounded-sm border border-ledger-line bg-ledger-surface px-3 py-2 text-xs text-ledger-muted">
+                <span className="h-1.5 w-1.5 bg-ledger-green" />
                 {storeCountLabel}
               </span>
             </div>
           </div>
 
           {isLoadingStores ? (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {[0, 1, 2].map((item) => (
-                <div
-                  key={item}
-                  className="overflow-hidden rounded-3xl border border-ink-200/80 bg-white dark:border-ink-800 dark:bg-ink-900"
-                >
-                  <div className="h-36 animate-pulse bg-ink-100 dark:bg-ink-800" />
-                  <div className="space-y-3 p-5">
-                    <div className="h-12 w-12 animate-pulse rounded-2xl bg-ink-100 dark:bg-ink-800" />
-                    <div className="h-4 w-2/3 animate-pulse rounded bg-ink-100 dark:bg-ink-800" />
-                    <div className="h-3 w-1/2 animate-pulse rounded bg-ink-100 dark:bg-ink-800" />
+                <div key={item} className="overflow-hidden rounded-md border border-ledger-line bg-ledger-surface">
+                  <div className="h-28 bg-ledger-paper" />
+                  <div className="space-y-3 p-4">
+                    <div className="h-11 w-11 rounded-md bg-ledger-paper" />
+                    <div className="h-3 w-2/3 rounded bg-ledger-paper" />
+                    <div className="h-3 w-1/2 rounded bg-ledger-paper" />
                   </div>
                 </div>
               ))}
             </div>
           ) : filteredStores.length > 0 ? (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {filteredStores.map((store) => (
                 <StoreCard
                   key={store.id}
@@ -631,199 +435,165 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   isOpening={pendingSlug === store.slug}
                   isDisabled={isPending}
                   onOpen={() => void openStore(store.slug)}
-                  viewLabel={isFr ? 'Visiter la vitrine' : 'Visit storefront'}
+                  viewLabel={isFr ? 'Voir la boutique' : 'View store'}
                   onlineLabel={isFr ? 'En ligne' : 'Online'}
                   fallbackDescription={
                     isFr
-                      ? 'Découvrez le catalogue et commandez en un clic sur WhatsApp.'
-                      : 'Browse the catalog and order in one tap on WhatsApp.'
+                      ? 'Découvrez les articles disponibles dans cette boutique.'
+                      : 'Discover the items available in this store.'
                   }
                 />
               ))}
             </div>
           ) : (
-            <div className="mt-10 rounded-3xl border border-ink-200 bg-white p-10 text-center shadow-subtle dark:border-ink-800 dark:bg-ink-900">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                <StoreIcon className="h-7 w-7" />
+            <div className="mt-8 border border-ledger-line bg-ledger-surface p-8 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-ledger-paper text-ledger-muted">
+                <StoreIcon className="h-6 w-6" />
               </div>
-              <h3 className="mt-4 font-display text-lg font-bold text-ink-950 dark:text-white">
-                {storeFilter ? (isFr ? 'Aucune boutique correspondante' : 'No matching store') : t.landing.emptyStoresTitle}
+              <h3 className="mt-3 font-registry text-base text-ledger-ink">
+                {t.landing.emptyStoresTitle}
               </h3>
-              <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-500 dark:text-ink-400">
-                {storeFilter
-                  ? isFr
-                    ? 'Essayez un autre nom ou une autre ville.'
-                    : 'Try another store name or city.'
-                  : t.landing.emptyStoresText}
+              <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ledger-muted">
+                {t.landing.emptyStoresText}
               </p>
-              <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-                {storeFilter ? (
-                  <button
-                    type="button"
-                    onClick={() => setStoreFilter('')}
-                    className={`rounded-xl border border-ink-200 px-4 py-2.5 text-xs font-bold text-ink-800 hover:bg-ink-50 dark:border-ink-700 dark:text-white ${FOCUS}`}
-                  >
-                    {isFr ? 'Tout afficher' : 'Show all'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onCreateStore}
-                    className={`inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 ${FOCUS}`}
-                  >
-                    <UserRound className="h-4 w-4" />
-                    {t.landing.ctaCreateStore}
-                  </button>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={onMerchantLogin}
+                className={`mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-ledger-ink px-4 py-2.5 text-xs font-semibold text-ledger-surface transition-colors hover:bg-ledger-green ${FOCUS}`}
+              >
+                <UserRound className="h-3.5 w-3.5" />
+                {isFr ? 'Espace gérant' : 'Merchant space'}
+              </button>
             </div>
           )}
         </div>
       </section>
 
-      {/* =========================================================
-          6. PRICING SECTION
-         ========================================================= */}
-      <PricingSection language={language} onSelectPlan={onCreateStore} />
-
-      {/* =========================================================
-          7. FAQ ACCORDION
-         ========================================================= */}
-      <section id="faq" className="mx-auto w-full max-w-3xl px-4 pb-20 sm:px-6">
-        <div className="text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
-            FAQ
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-ink-950 dark:text-white">
-            {isFr ? 'Questions fréquentes' : 'Frequently asked questions'}
+      <section id="tarifs" className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
+        <div className="max-w-2xl">
+          <p className="text-sm text-ledger-green">{isFr ? 'Formules' : 'Plans'}</p>
+          <h2 className="mt-3 font-registry text-3xl leading-tight tracking-[-0.02em] text-ledger-ink sm:text-4xl">
+            {isFr ? 'Commencez petit, grandissez à votre rythme' : 'Start small, grow at your pace'}
           </h2>
+          <p className="mt-4 text-sm leading-relaxed text-ledger-muted">
+            {isFr
+              ? 'Une vitrine gratuite pour démarrer, puis plus de place quand votre catalogue grandit.'
+              : 'A free storefront to start, then more room as your catalog grows.'}
+          </p>
         </div>
-
-        <div className="mt-8 space-y-3">
-          {faqs.map((item, idx) => {
-            const isOpen = openFaqIndex === idx;
+        <div className="mt-10 grid gap-3 sm:grid-cols-3">
+          {PLAN_IDS.map((planId) => {
+            const plan = PLANS[planId];
             return (
               <div
-                key={item.q}
-                className="overflow-hidden rounded-2xl border border-ink-200/90 bg-white transition-colors dark:border-ink-800 dark:bg-ink-900"
+                key={planId}
+                className={`border p-5 ${planId === 'decouverte' ? 'border-ledger-green bg-ledger-green/5' : 'border-ledger-line bg-ledger-surface'}`}
               >
+                <p className="font-registry text-lg text-ledger-ink">{plan.label}</p>
+                <p className="mt-3 font-registry text-3xl text-ledger-green">
+                  {plan.price === 0
+                    ? isFr
+                      ? 'Gratuit'
+                      : 'Free'
+                    : formatFCFA(plan.price, language)}
+                </p>
+                <p className="mt-1 text-xs text-ledger-muted">
+                  {plan.price === 0
+                    ? isFr
+                      ? 'sans limite de temps'
+                      : 'no time limit'
+                    : isFr
+                      ? 'par an'
+                      : 'per year'}
+                </p>
+                <p className="mt-4 border-t border-ledger-line pt-4 text-sm text-ledger-muted">
+                  {plan.maxProducts === PLANS.premium.maxProducts
+                    ? isFr
+                      ? 'Jusqu’à 999 articles'
+                      : 'Up to 999 items'
+                    : `${plan.maxProducts} ${isFr ? 'articles' : 'items'}`}
+                </p>
                 <button
                   type="button"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                  className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left ${FOCUS}`}
+                  onClick={onCreateStore}
+                  className={`mt-5 min-h-11 w-full rounded-md border border-ledger-line bg-ledger-surface px-4 py-2.5 text-sm font-semibold text-ledger-ink transition-colors hover:border-ledger-green ${FOCUS}`}
                 >
-                  <span className="font-display text-sm font-bold text-ink-950 dark:text-white sm:text-base">
-                    {item.q}
-                  </span>
-                  <ChevronDown
-                    className={`h-4 w-4 shrink-0 text-ink-400 transition-transform duration-200 ${
-                      isOpen ? 'rotate-180 text-emerald-600' : ''
-                    }`}
-                  />
+                  {isFr ? 'Créer ma vitrine' : 'Create my storefront'}
                 </button>
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <p className="border-t border-ink-100 px-5 pb-4 pt-3 text-sm leading-relaxed text-ink-600 dark:border-ink-800 dark:text-ink-300">
-                        {item.a}
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             );
           })}
         </div>
+        <p className="mt-4 max-w-3xl text-xs leading-relaxed text-ledger-muted">
+          {isFr
+            ? `Codes promo : ${PROMO_CODES.join(', ')}. Pro à ${formatFCFA(PLANS.pro.promoPrice, 'fr')} et Premium à ${formatFCFA(PLANS.premium.promoPrice, 'fr')} la première année.`
+            : `Promo codes: ${PROMO_CODES.join(', ')}. Pro at ${formatFCFA(PLANS.pro.promoPrice, 'en')} and Premium at ${formatFCFA(PLANS.premium.promoPrice, 'en')} for the first year.`}
+        </p>
       </section>
 
-      {/* =========================================================
-          8. FINAL CONVERSION BANNER
-         ========================================================= */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
-        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#061812] via-[#0B2D21] to-[#064E3B] px-6 py-12 text-center text-white shadow-elevated sm:px-12 sm:py-16">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-16 -top-16 h-60 w-60 rounded-full bg-emerald-400/20 blur-3xl"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-16 -left-16 h-60 w-60 rounded-full bg-amber-400/15 blur-3xl"
-          />
-
-          <div className="relative mx-auto max-w-2xl">
-            <h2 className="font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              {isFr
-                ? 'Prêt à donner une vraie vitrine à votre boutique ?'
-                : 'Ready to give your business a real storefront?'}
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-emerald-100/85 sm:text-base">
-              {isFr
-                ? 'Créez votre catalogue gratuit maintenant, testez-le sur votre téléphone et partagez votre lien dès aujourd’hui.'
-                : 'Create your free catalog now, preview it on your phone, and share your link today.'}
-            </p>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={onCreateStore}
-                className={`inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-bold text-[#061812] shadow-lg transition-transform hover:-translate-y-0.5 hover:bg-emerald-50 ${FOCUS}`}
-              >
-                <Sparkles className="h-4 w-4 text-emerald-600" />
-                <span>{t.landing.ctaCreateStore}</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={onMerchantLogin}
-                className={`inline-flex min-h-12 items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/15 ${FOCUS}`}
-              >
-                <UserRound className="h-4 w-4" />
-                <span>{isFr ? 'Espace gérant' : 'Merchant space'}</span>
-              </button>
-            </div>
+      <section id="faq" className="border-t border-ledger-line bg-ledger-surface">
+        <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
+          <p className="text-sm text-ledger-green">
+            {isFr ? 'Questions fréquentes' : 'Common questions'}
+          </p>
+          <h2 className="mt-3 font-registry text-3xl leading-tight tracking-[-0.02em] text-ledger-ink sm:text-4xl">
+            {isFr ? 'Ce que vous demandez le plus' : 'What you ask most'}
+          </h2>
+          <div className="mt-8 border-t border-ledger-line">
+            {faqCopy.map((item) => (
+              <details key={item.question} className="group border-b border-ledger-line py-4">
+                <summary
+                  className={`flex cursor-pointer list-none items-center justify-between gap-4 font-registry text-base text-ledger-ink ${FOCUS}`}
+                >
+                  {item.question}
+                  <span className="font-ledger-mono text-ledger-green group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ledger-muted">
+                  {item.answer}
+                </p>
+              </details>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* =========================================================
-          9. FOOTER
-         ========================================================= */}
-      <footer className="mt-auto border-t border-ink-200/80 bg-white dark:border-ink-800 dark:bg-ink-900">
+      <section className="border-t border-ledger-line bg-ledger-ink text-ledger-surface">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p className="font-registry text-2xl">
+            {isFr ? 'Votre vitrine est prête.' : 'Your storefront is ready.'}
+          </p>
+          <button
+            type="button"
+            onClick={onCreateStore}
+            className={`min-h-11 rounded-md bg-ledger-surface px-5 py-3 text-sm font-semibold text-ledger-ink transition-colors hover:bg-ledger-paper ${FOCUS}`}
+          >
+            {t.landing.ctaCreateStore}
+          </button>
+        </div>
+      </section>
+
+      <footer className="mt-auto border-t border-ledger-line bg-ledger-surface">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 font-display text-sm font-extrabold text-white shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-ledger-ink font-registry text-sm text-ledger-surface">
               VE
             </div>
             <div>
-              <p className="font-display text-sm font-bold text-ink-950 dark:text-white">
-                VitrineExpress
-              </p>
-              <p className="text-xs text-ink-500 dark:text-ink-400">
-                {t.landing.footerSubtitle}
-              </p>
+              <p className="font-registry text-sm text-ledger-ink">VitrineExpress</p>
+              <p className="text-[11px] text-ledger-muted">{t.landing.footerSubtitle}</p>
             </div>
           </div>
-
-          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-semibold text-ink-600 dark:text-ink-300">
-            <a href="#boutiques" className={`transition-colors hover:text-emerald-600 ${FOCUS}`}>
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-ledger-muted">
+            <a href="#boutiques" className={`transition-colors hover:text-ledger-green ${FOCUS}`}>
               {isFr ? 'Boutiques' : 'Stores'}
             </a>
-            <a href="#tarifs" className={`transition-colors hover:text-emerald-600 ${FOCUS}`}>
-              {isFr ? 'Tarifs' : 'Pricing'}
-            </a>
-            <a href="#faq" className={`transition-colors hover:text-emerald-600 ${FOCUS}`}>
-              FAQ
+            <a href="#tarifs" className={`transition-colors hover:text-ledger-green ${FOCUS}`}>
+              {isFr ? 'Formules' : 'Plans'}
             </a>
             <button
               type="button"
               onClick={onMerchantLogin}
-              className={`inline-flex items-center gap-1.5 transition-colors hover:text-emerald-600 ${FOCUS}`}
+              className={`inline-flex items-center gap-1.5 transition-colors hover:text-ledger-green ${FOCUS}`}
             >
               <LockKeyhole className="h-3.5 w-3.5" />
               {isFr ? 'Espace gérant' : 'Merchant space'}
@@ -831,7 +601,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
             <LanguageSwitcher variant="footer" />
           </nav>
         </div>
-        <div className="border-t border-ink-100 px-4 py-4 text-center text-[11px] text-ink-500 dark:border-ink-800 dark:text-ink-400">
+        <div className="border-t border-ledger-line px-4 py-4 text-center text-[10px] text-ledger-muted">
           © {new Date().getFullYear()} {t.landing.footerDesignedBy}
         </div>
       </footer>
