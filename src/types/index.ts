@@ -76,4 +76,4 @@ export interface InAppNotification {
   isRead?: boolean;
 }
 
-export type ViewMode = 'landing' | 'register' | 'storefront' | 'merchant' | 'admin' | 'print-poster' | 'not-found';
+export type ViewMode = 'landing' | 'register' | 'storefront' | 'merchant' | 'admin' | 'print-poster' | 'terms' | 'privacy' | 'not-found';

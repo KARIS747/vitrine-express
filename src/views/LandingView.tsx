@@ -531,6 +531,12 @@ export const LandingView: React.FC<LandingViewProps> = ({
             <a href="#tarifs" className={`transition-colors hover:text-ledger-green ${FOCUS}`}>
               {t.landing.plansNav}
             </a>
+            <a href="/cgu-cgv" className={`transition-colors hover:text-ledger-green ${FOCUS}`}>
+              {t.nav.terms}
+            </a>
+            <a href="/confidentialite" className={`transition-colors hover:text-ledger-green ${FOCUS}`}>
+              {t.nav.privacy}
+            </a>
             <button
               type="button"
               onClick={onMerchantLogin}

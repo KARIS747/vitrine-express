@@ -7,6 +7,7 @@ import { StorefrontView } from './views/StorefrontView';
 import { StorefrontSkeleton } from './components/StorefrontSkeleton';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { NotFoundView } from './views/NotFoundView';
+import { LegalView } from './views/LegalView';
 
 const MerchantDashboardView = lazy(() =>
   import('./views/MerchantDashboardView').then((module) => ({ default: module.MerchantDashboardView })),
@@ -41,6 +42,8 @@ function viewFromPath(): ViewMode {
   if (path === '/creer-boutique' || path === '/register') return 'register';
   if (path === '/merchant' || path.startsWith('/merchant/')) return 'merchant';
   if (path.startsWith('/boutique/')) return 'storefront';
+  if (path === '/cgu-cgv') return 'terms';
+  if (path === '/confidentialite') return 'privacy';
   return 'not-found';
 }
 
@@ -187,6 +190,18 @@ export const App: React.FC = () => {
       void loadPublicStore();
     } else if (initialView === 'landing') {
       void loadLandingStores();
+    } else if (initialView === 'terms') {
+      updatePageSeo({
+        title: 'CGU/CGV — VitrineExpress',
+        description: 'Conditions générales d’utilisation et de vente de VitrineExpress.',
+        canonicalPath: '/cgu-cgv',
+      });
+    } else if (initialView === 'privacy') {
+      updatePageSeo({
+        title: 'Politique de confidentialité — VitrineExpress',
+        description: 'Données collectées, finalités, sécurité et droits des utilisateurs VitrineExpress.',
+        canonicalPath: '/confidentialite',
+      });
     }
 
     const session = dbService.getMerchantSession();
@@ -273,6 +288,28 @@ export const App: React.FC = () => {
         title: 'Administration Plateforme',
         description: 'Gestion des licences et des boutiques VitrineExpress.',
         canonicalPath: '/karis-hq',
+      });
+      return;
+    }
+
+    if (view === 'terms') {
+      setCurrentView('terms');
+      window.history.pushState({}, '', '/cgu-cgv');
+      updatePageSeo({
+        title: 'CGU/CGV — VitrineExpress',
+        description: 'Conditions générales d’utilisation et de vente de VitrineExpress.',
+        canonicalPath: '/cgu-cgv',
+      });
+      return;
+    }
+
+    if (view === 'privacy') {
+      setCurrentView('privacy');
+      window.history.pushState({}, '', '/confidentialite');
+      updatePageSeo({
+        title: 'Politique de confidentialité — VitrineExpress',
+        description: 'Données collectées, finalités, sécurité et droits des utilisateurs VitrineExpress.',
+        canonicalPath: '/confidentialite',
       });
       return;
     }
@@ -456,6 +493,9 @@ export const App: React.FC = () => {
           attemptedPath={window.location.pathname}
         />
       )}
+
+      {currentView === 'terms' && <LegalView kind="terms" onGoHome={() => navigate('landing')} />}
+      {currentView === 'privacy' && <LegalView kind="privacy" onGoHome={() => navigate('landing')} />}
 
       <Suspense fallback={<ViewFallback />}>
         {currentView === 'register' && (

@@ -10,6 +10,8 @@ export interface Translations {
     merchantSpace: string;
     login: string;
     admin: string;
+    terms: string;
+    privacy: string;
     searchPlaceholder: string;
     subTitle: string;
   };
@@ -154,6 +156,8 @@ export const translations: Record<Language, Translations> = {
       merchantSpace: 'Espace gérant',
       login: 'Se connecter',
       admin: 'Administration',
+      terms: 'CGU/CGV',
+      privacy: 'Confidentialité',
       searchPlaceholder: 'Rechercher un article...',
       subTitle: 'Vitrines en ligne',
     },
@@ -306,6 +310,8 @@ export const translations: Record<Language, Translations> = {
       merchantSpace: 'Merchant space',
       login: 'Sign in',
       admin: 'Admin',
+      terms: 'Terms',
+      privacy: 'Privacy',
       searchPlaceholder: 'Search for an item...',
       subTitle: 'Online storefronts',
     },
