@@ -65,7 +65,7 @@ Le schéma complet est défini dans `schema.sql`.
 4. **`notifications`** : Centre de notifications in-app.
    - `id`, `store_id` (NULL = broadcast général, ou ID boutique = ciblé), `title`, `message`, `type` (`info`|`success`|`warning`|`tip`), `link_url`, `created_at`.
 5. **`notification_reads`** : Suivi de lecture des notifications (`notification_id`, `store_id`, `read_at`).
-6. **`license_payments`** : Grand livre comptable des règlements et créances par licence (`id`, `store_id`, `license_key`, `plan`, `months`, `amount`, `status` ['paid'|'due'|'cancelled'], `note`, `created_at`).
+6. **`license_payments`** : Grand livre comptable des règlements et créances par licence (`id`, `store_id`, `license_key`, `plan`, `months`, `amount`, `status` ['paid'|'due'|'cancelled'], `note`, `created_at`). La `note` du renouvellement admin peut contenir l'opérateur, la référence de transaction et une note interne saisie depuis le License Manager.
 7. **`sessions`** : Sessions HttpOnly pour marchands et administrateur (`token_hash`, `scope`, `store_id`, `expires_at`).
 8. **`auth_attempts`** : Protection anti-brute force / rate limiting.
 9. **`licenses`** : Historique et facturation interne.
@@ -129,6 +129,10 @@ Dans cet environnement (Linux, `mise` ou binaires locaux), toujours exécuter vi
 
 # Appliquer le schéma en production Cloudflare (nécessite connexion réseau)
 ./node_modules/.bin/wrangler d1 execute vitrine_express_db --remote --file=./schema.sql
+
+# Appliquer les migrations idempotentes (colonnes manquantes sur une base existante)
+npm run db:migrate:local
+npm run db:migrate:remote
 ```
 
 ### Déploiement Cloudflare Pages
@@ -147,3 +151,4 @@ Dans cet environnement (Linux, `mise` ou binaires locaux), toujours exécuter vi
 2. **Pas de régression sur la connexion sans friction** : L'identifiant marchand doit toujours accepter indifféremment le nom de la boutique, le numéro WhatsApp ou la clé de licence.
 3. **Respect strict des quotas** : La création de produit (`addProduct`) doit toujours refuser l'ajout si `products.length >= maxProducts`.
 4. **Neutralité et Professionnalisme** : Conserver le ton institutionnel fintech, la clarté pour l'utilisateur mobile (boutons tactiles 44px min), et l'absence d'emojis dans les interfaces.
+5. **Traçabilité admin** : Les actions sensibles (statut, renouvellement, quota, reset PIN) émettent un log JSON `scope: "admin-audit"` sans secret. Ne jamais journaliser de token, PIN ou clé d'administration.

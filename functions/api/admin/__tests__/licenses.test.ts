@@ -314,6 +314,38 @@ describe('Admin API: /api/admin/licenses', () => {
       expect(data.store.max_products).toBe(30);
     });
 
+    it('persists payment metadata on renewal', async () => {
+      const currentStore = { ...sampleStore, id: 'store_123', expires_at: '2026-11-01T00:00:00.000Z' };
+      const db = createMockD1({ stores: [currentStore] });
+
+      const req = new Request('http://localhost/api/admin/licenses', {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({
+          storeId: 'store_123',
+          action: 'renew',
+          plan: 'pro',
+          additionalMonths: 12,
+          paymentOperator: 'MTN MoMo',
+          paymentReference: 'TXN-987654',
+          note: 'capture reçue sur WhatsApp',
+        }),
+      });
+
+      const res = await onRequestPatch({
+        request: req,
+        env: { DB: db, ADMIN_KEY, PIN_PEPPER },
+      });
+
+      expect(res.status).toBe(200);
+      const lastPayment = db.licensePayments[db.licensePayments.length - 1];
+      expect(lastPayment.status).toBe('paid');
+      expect(lastPayment.note).toContain('Opérateur MTN MoMo');
+      expect(lastPayment.note).toContain('Référence TXN-987654');
+      expect(lastPayment.note).toContain('capture reçue sur WhatsApp');
+      expect(db.licenses[0].notes).toContain('Référence TXN-987654');
+    });
+
     it('deletes merchant sessions when resetting PIN', async () => {
       const currentStore = { ...sampleStore, id: 'store_123' };
       const db = createMockD1({

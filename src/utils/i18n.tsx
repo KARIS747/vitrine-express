@@ -33,6 +33,8 @@ export interface Translations {
     pasteLinkPlaceholder: string;
     openStoreBtn: string;
     invalidLinkError: string;
+    storeNotFound: string;
+    qrInvalid: string;
     merchantCardTitle: string;
     merchantCardText: string;
     merchantLoginBtn: string;
@@ -49,6 +51,33 @@ export interface Translations {
     onlineStoresHeading: string;
     emptyStoresTitle: string;
     emptyStoresText: string;
+    ticketEyebrow: string;
+    catalogLabel: string;
+    locationLabel: string;
+    itemsLabel: string;
+    fallbackStoreName: string;
+    storesOnline: string;
+    readyMessage: string;
+    searchStores: string;
+    viewStore: string;
+    onlineLabel: string;
+    fallbackDescription: string;
+    pricingEyebrow: string;
+    pricingTitle: string;
+    pricingDescription: string;
+    pricingNote: string;
+    freeLabel: string;
+    perYear: string;
+    noTimeLimit: string;
+    upToItems: string;
+    createStoreCta: string;
+    faqEyebrow: string;
+    faqTitle: string;
+    faq: { question: string; answer: string }[];
+    finalCtaTitle: string;
+    storesNav: string;
+    plansNav: string;
+    merchantSpace: string;
     footerSubtitle: string;
     footerDesignedBy: string;
   };
@@ -147,6 +176,8 @@ export const translations: Record<Language, Translations> = {
       pasteLinkPlaceholder: 'Coller un lien ou un nom de boutique...',
       openStoreBtn: 'Ouvrir',
       invalidLinkError: 'Ce lien ne correspond pas à une boutique VitrineExpress. Vérifiez le lien ou son QR code.',
+      storeNotFound: 'Boutique introuvable ou indisponible pour le moment.',
+      qrInvalid: 'Ce QR code ne contient pas de lien vers une boutique VitrineExpress.',
       merchantCardTitle: 'Vous êtes boutiquier ?',
       merchantCardText: 'Gérez votre catalogue, vos prix et vos arrivages.',
       merchantLoginBtn: 'Se connecter à mon espace',
@@ -163,6 +194,46 @@ export const translations: Record<Language, Translations> = {
       onlineStoresHeading: 'Boutiques en ligne',
       emptyStoresTitle: 'Les premières vitrines arrivent bientôt',
       emptyStoresText: 'Vous êtes commerçant ? Connectez-vous à votre espace pour mettre votre catalogue en ligne.',
+      ticketEyebrow: 'Vitrine en ligne',
+      catalogLabel: 'Catalogue',
+      locationLabel: 'Emplacement',
+      itemsLabel: 'articles',
+      fallbackStoreName: 'Boutique Douala',
+      storesOnline: '{count} boutiques en ligne',
+      readyMessage: 'Le message est déjà prêt.',
+      searchStores: 'Rechercher une boutique',
+      viewStore: 'Voir la boutique',
+      onlineLabel: 'En ligne',
+      fallbackDescription: 'Découvrez les articles disponibles dans cette boutique.',
+      pricingEyebrow: 'Formules',
+      pricingTitle: 'Commencez petit, grandissez à votre rythme',
+      pricingDescription: 'Une vitrine gratuite pour démarrer, puis plus de place quand votre catalogue grandit.',
+      pricingNote: 'Codes promo : {codes}. Pro à {pro} et Premium à {premium} la première année.',
+      freeLabel: 'Gratuit',
+      perYear: 'par an',
+      noTimeLimit: 'sans limite de temps',
+      upToItems: 'Jusqu’à {count} articles',
+      createStoreCta: 'Créer ma vitrine',
+      faqEyebrow: 'Questions fréquentes',
+      faqTitle: 'Ce que vous demandez le plus',
+      faq: [
+        {
+          question: 'Ai-je besoin de compétences techniques ou d’un ordinateur ?',
+          answer: 'Non. Tout se fait depuis votre téléphone : créer la boutique, ajouter des photos, modifier les prix et télécharger votre affiche QR.',
+        },
+        {
+          question: 'Prenez-vous une commission sur mes ventes ?',
+          answer: 'Jamais. Vos clients vous envoient leurs commandes sur WhatsApp et vous réglez directement avec eux.',
+        },
+        {
+          question: 'Combien coûte l’ouverture d’une boutique ?',
+          answer: 'Le plan Découverte est gratuit jusqu’à {freeQuota} articles. Pro coûte {proPrice} par an et Premium {premiumPrice}.',
+        },
+      ],
+      finalCtaTitle: 'Votre vitrine est prête.',
+      storesNav: 'Boutiques',
+      plansNav: 'Formules',
+      merchantSpace: 'Espace gérant',
       footerSubtitle: 'Vitrines WhatsApp pour les commerçants.',
       footerDesignedBy: 'VitrineExpress, tous droits réservés.',
     },
@@ -257,6 +328,8 @@ export const translations: Record<Language, Translations> = {
       pasteLinkPlaceholder: 'Paste a link or store name...',
       openStoreBtn: 'Open',
       invalidLinkError: 'This link does not belong to a VitrineExpress store. Please check the URL or QR code.',
+      storeNotFound: 'Store not found or currently unavailable.',
+      qrInvalid: 'This QR code does not link to a VitrineExpress store.',
       merchantCardTitle: 'Are you a shop owner?',
       merchantCardText: 'Manage your catalog, prices and upcoming stock arrivals.',
       merchantLoginBtn: 'Log in to my space',
@@ -273,6 +346,46 @@ export const translations: Record<Language, Translations> = {
       onlineStoresHeading: 'Online stores',
       emptyStoresTitle: 'First storefronts coming soon',
       emptyStoresText: 'Are you a merchant? Sign in to your dashboard to publish your catalog.',
+      ticketEyebrow: 'Online store',
+      catalogLabel: 'Catalog',
+      locationLabel: 'Location',
+      itemsLabel: 'items',
+      fallbackStoreName: 'Douala Store',
+      storesOnline: '{count} stores online',
+      readyMessage: 'The message is already ready.',
+      searchStores: 'Search a store',
+      viewStore: 'View store',
+      onlineLabel: 'Online',
+      fallbackDescription: 'Discover the items available in this store.',
+      pricingEyebrow: 'Plans',
+      pricingTitle: 'Start small, grow at your pace',
+      pricingDescription: 'A free storefront to start, then more room as your catalog grows.',
+      pricingNote: 'Promo codes: {codes}. Pro at {pro} and Premium at {premium} for the first year.',
+      freeLabel: 'Free',
+      perYear: 'per year',
+      noTimeLimit: 'no time limit',
+      upToItems: 'Up to {count} items',
+      createStoreCta: 'Create my storefront',
+      faqEyebrow: 'Common questions',
+      faqTitle: 'What you ask most',
+      faq: [
+        {
+          question: 'Do I need technical skills or a laptop?',
+          answer: 'No. Everything happens on your phone: create the store, add photos, update prices, and download your QR poster.',
+        },
+        {
+          question: 'Do you charge a commission on sales?',
+          answer: 'Never. Customers send orders to your WhatsApp and settle payment directly with you.',
+        },
+        {
+          question: 'How much does it cost to start?',
+          answer: 'The Découverte plan is free up to {freeQuota} items. Pro costs {proPrice} per year and Premium {premiumPrice}.',
+        },
+      ],
+      finalCtaTitle: 'Your storefront is ready.',
+      storesNav: 'Stores',
+      plansNav: 'Plans',
+      merchantSpace: 'Merchant space',
       footerSubtitle: 'WhatsApp storefronts for local businesses.',
       footerDesignedBy: 'VitrineExpress, all rights reserved.',
     },

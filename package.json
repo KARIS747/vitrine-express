@@ -13,7 +13,9 @@
     "dev:full": "npm run build && npx wrangler pages dev dist",
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name=vitrine-express",
     "db:local": "npx wrangler d1 execute vitrine_express_db --local --file=./schema.sql",
-    "db:remote": "npx wrangler d1 execute vitrine_express_db --remote --file=./schema.sql"
+    "db:remote": "npx wrangler d1 execute vitrine_express_db --remote --file=./schema.sql",
+    "db:migrate:local": "node scripts/migrate-d1.mjs --local",
+    "db:migrate:remote": "node scripts/migrate-d1.mjs --remote"
   },
   "dependencies": {
     "clsx": "^2.1.1",

@@ -130,6 +130,16 @@ async function recordPayment(
     .run();
 }
 
+function auditAdmin(action: string, storeId: string, details: Record<string, unknown> = {}) {
+  console.info(JSON.stringify({
+    scope: "admin-audit",
+    at: new Date().toISOString(),
+    action,
+    storeId,
+    ...details,
+  }));
+}
+
 export const onRequestGet = async (context: { request: Request; env: Env }) => {
   const denial = await guardAdmin(context.request, context.env);
   if (denial) return denial;
@@ -335,6 +345,7 @@ export const onRequestPatch = async (context: { request: Request; env: Env }) =>
         db.prepare(`UPDATE licenses SET status = ? WHERE store_id = ?`)
           .bind(nextActive === 1 ? "active" : "revoked", storeId),
       ]);
+      auditAdmin("toggleStatus", storeId, { isActive: nextActive === 1 });
     } else if (action === "renew") {
       if (isInvalidPlan(body.plan)) {
         return json({ error: "Formule inconnue" }, 400);
@@ -367,7 +378,15 @@ export const onRequestPatch = async (context: { request: Request; env: Env }) =>
         : new Date();
       const newExpiry = addMonths(base, months).toISOString();
       const licenseStatus = Number(store.is_active) === 1 ? "active" : "revoked";
-      const notes = `Renouvellement ${planLabel(plan)}${promoApplied ? " (promo)" : ""} · ${months} mois`;
+      const paymentOperator = String(body.paymentOperator ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+      const paymentReference = String(body.paymentReference ?? "").trim().replace(/\s+/g, " ").slice(0, 120);
+      const paymentNote = String(body.note ?? "").trim().replace(/\s+/g, " ").slice(0, 300);
+      const paymentMeta = [
+        paymentOperator ? `Opérateur ${paymentOperator}` : "",
+        paymentReference ? `Référence ${paymentReference}` : "",
+        paymentNote,
+      ].filter(Boolean).join(" | ");
+      const notes = `Renouvellement ${planLabel(plan)}${promoApplied ? " (promo)" : ""} · ${months} mois${paymentMeta ? ` | ${paymentMeta}` : ""}`;
 
       await db
         .prepare(`
@@ -424,6 +443,7 @@ export const onRequestPatch = async (context: { request: Request; env: Env }) =>
       });
 
       responseExtra = { plan, amountPaid, promoApplied, months };
+      auditAdmin("renew", storeId, { plan, months, amountPaid, promoApplied, paymentOperator, paymentReference });
     } else if (action === "resetPin") {
       if (!context.env.PIN_PEPPER) {
         return json({ error: "Configuration de sécurité incomplète (PIN_PEPPER)" }, 500);
@@ -436,6 +456,7 @@ export const onRequestPatch = async (context: { request: Request; env: Env }) =>
         db.prepare(`DELETE FROM sessions WHERE store_id = ? AND scope = 'merchant'`)
           .bind(storeId),
       ]);
+      auditAdmin("resetPin", storeId, { sessionsRevoked: true });
     } else if (action === "updateQuota") {
       const newQuota = clampQuota(body.maxProducts, Number(store.max_products) || PLANS.decouverte.maxProducts);
       const currentProducts = await countProducts(db, storeId);
@@ -450,6 +471,7 @@ export const onRequestPatch = async (context: { request: Request; env: Env }) =>
           warning: `Le quota (${newQuota}) est inférieur aux ${currentProducts} articles déjà publiés. Aucun nouvel article ne pourra être ajouté.`,
         };
       }
+      auditAdmin("updateQuota", storeId, { maxProducts: newQuota, currentProducts });
     } else {
       return json({ error: "Action administrateur inconnue" }, 400);
     }

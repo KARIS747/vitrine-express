@@ -132,7 +132,6 @@ export const LandingView: React.FC<LandingViewProps> = ({
   onCreateStore,
 }) => {
   const { t, language } = useLanguage();
-  const isFr = language === 'fr';
 
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [linkInput, setLinkInput] = useState('');
@@ -146,11 +145,8 @@ export const LandingView: React.FC<LandingViewProps> = ({
     try {
       const opened = await onOpenStoreBySlug(slug);
       if (!opened) {
-        const message = isFr
-          ? 'Boutique introuvable ou indisponible pour le moment.'
-          : 'Store not found or currently unavailable.';
-        setLinkError(message);
-        toast.error(message);
+        setLinkError(t.landing.storeNotFound);
+        toast.error(t.landing.storeNotFound);
       }
     } finally {
       setPendingSlug(null);
@@ -170,11 +166,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
   const handleDetected = (value: string) => {
     const slug = extractStoreSlug(value);
     if (!slug) {
-      toast.error(
-        isFr
-          ? 'Ce QR code ne contient pas de lien vers une boutique VitrineExpress.'
-          : 'This QR code does not link to a VitrineExpress store.',
-      );
+      toast.error(t.landing.qrInvalid);
       return;
     }
     void openStore(slug);
@@ -193,48 +185,20 @@ export const LandingView: React.FC<LandingViewProps> = ({
   const stepTitles = [t.landing.step1Title, t.landing.step2Title, t.landing.step3Title];
   const stepDescriptions = [t.landing.step1Desc, t.landing.step2Desc, t.landing.step3Desc];
 
-  const faqCopy = isFr
-    ? [
-        {
-          question: 'Ai-je besoin de compétences techniques ou d’un ordinateur ?',
-          answer:
-            'Non. Tout se fait depuis votre téléphone : créer la boutique, ajouter des photos, modifier les prix et télécharger votre affiche QR.',
-        },
-        {
-          question: 'Prenez-vous une commission sur mes ventes ?',
-          answer:
-            'Jamais. Vos clients vous envoient leurs commandes sur WhatsApp et vous réglez directement avec eux.',
-        },
-        {
-          question: 'Combien coûte l’ouverture d’une boutique ?',
-          answer: `Le plan Découverte est gratuit jusqu’à ${PLANS.decouverte.maxProducts} articles. Pro coûte ${formatFCFA(PLANS.pro.price, 'fr')} par an et Premium ${formatFCFA(PLANS.premium.price, 'fr')}.`,
-        },
-      ]
-    : [
-        {
-          question: 'Do I need technical skills or a laptop?',
-          answer:
-            'No. Everything happens on your phone: create the store, add photos, update prices, and download your QR poster.',
-        },
-        {
-          question: 'Do you charge a commission on sales?',
-          answer:
-            'Never. Customers send orders to your WhatsApp and settle payment directly with you.',
-        },
-        {
-          question: 'How much does it cost to start?',
-          answer: `The Découverte plan is free up to ${PLANS.decouverte.maxProducts} items. Pro costs ${formatFCFA(PLANS.pro.price, 'en')} per year and Premium ${formatFCFA(PLANS.premium.price, 'en')}.`,
-        },
-      ];
+  const faqCopy = t.landing.faq.map((item) => ({
+    question: item.question,
+    answer: item.answer
+      .replace('{freeQuota}', String(PLANS.decouverte.maxProducts))
+      .replace('{proPrice}', formatFCFA(PLANS.pro.price, language))
+      .replace('{premiumPrice}', formatFCFA(PLANS.premium.price, language)),
+  }));
 
   const isPending = pendingSlug !== null;
   const featuredStore = stores[0];
-  const ticketName = featuredStore?.name ?? (isFr ? 'Boutique Douala' : 'Douala Store');
+  const ticketName = featuredStore?.name ?? t.landing.fallbackStoreName;
   const ticketCity = featuredStore?.city ?? 'Cameroun';
   const ticketProducts = featuredStore?.current_products_count ?? PLANS.decouverte.maxProducts;
-  const storeCountLabel = isFr
-    ? `${stores.length} boutique${stores.length > 1 ? 's' : ''} en ligne`
-    : `${stores.length} store${stores.length > 1 ? 's' : ''} online`;
+  const storeCountLabel = t.landing.storesOnline.replace('{count}', String(stores.length));
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col bg-ledger-surface font-ledger text-ledger-ink">
@@ -273,7 +237,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               <div className="flex items-start justify-between gap-4 border-b border-ledger-line pb-4">
                 <div>
                   <p className="font-ledger-mono text-[11px] tracking-[0.08em] text-ledger-green">
-                    {isFr ? 'Vitrine en ligne' : 'Online store'}
+                    {t.landing.ticketEyebrow}
                   </p>
                   <p className="mt-2 font-registry text-2xl leading-tight text-ledger-ink">
                     {ticketName}
@@ -283,13 +247,13 @@ export const LandingView: React.FC<LandingViewProps> = ({
               </div>
               <div className="mt-4 space-y-2 text-sm text-ledger-muted">
                 <div className="flex items-baseline justify-between gap-4">
-                  <span>{isFr ? 'Catalogue' : 'Catalog'}</span>
+                  <span>{t.landing.catalogLabel}</span>
                   <span className="font-ledger-mono text-ledger-ink">
-                    {ticketProducts} {isFr ? 'articles' : 'items'}
+                    {ticketProducts} {t.landing.itemsLabel}
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between gap-4">
-                  <span>{isFr ? 'Emplacement' : 'Location'}</span>
+                  <span>{t.landing.locationLabel}</span>
                   <span className="font-ledger-mono text-ledger-ink">{ticketCity}</span>
                 </div>
               </div>
@@ -297,9 +261,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 <p className="font-registry text-lg text-ledger-green">
                   {t.storefront.orderWhatsApp}
                 </p>
-                <p className="mt-1 text-xs text-ledger-muted">
-                  {isFr ? 'Le message est déjà prêt.' : 'The message is already ready.'}
-                </p>
+                <p className="mt-1 text-xs text-ledger-muted">{t.landing.readyMessage}</p>
               </div>
             </div>
           </div>
@@ -401,8 +363,8 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   type="search"
                   value={storeFilter}
                   onChange={(event) => setStoreFilter(event.target.value)}
-                  placeholder={isFr ? 'Rechercher une boutique' : 'Search a store'}
-                  aria-label={isFr ? 'Rechercher une boutique' : 'Search a store'}
+                  placeholder={t.landing.searchStores}
+                  aria-label={t.landing.searchStores}
                   className={`min-h-11 w-full rounded-md border border-ledger-line bg-ledger-surface pl-9 pr-3 text-sm text-ledger-ink placeholder:text-ledger-muted sm:w-56 ${FOCUS}`}
                 />
               </label>
@@ -435,13 +397,9 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   isOpening={pendingSlug === store.slug}
                   isDisabled={isPending}
                   onOpen={() => void openStore(store.slug)}
-                  viewLabel={isFr ? 'Voir la boutique' : 'View store'}
-                  onlineLabel={isFr ? 'En ligne' : 'Online'}
-                  fallbackDescription={
-                    isFr
-                      ? 'Découvrez les articles disponibles dans cette boutique.'
-                      : 'Discover the items available in this store.'
-                  }
+                  viewLabel={t.landing.viewStore}
+                  onlineLabel={t.landing.onlineLabel}
+                  fallbackDescription={t.landing.fallbackDescription}
                 />
               ))}
             </div>
@@ -462,7 +420,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 className={`mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-ledger-ink px-4 py-2.5 text-xs font-semibold text-ledger-surface transition-colors hover:bg-ledger-green ${FOCUS}`}
               >
                 <UserRound className="h-3.5 w-3.5" />
-                {isFr ? 'Espace gérant' : 'Merchant space'}
+                {t.landing.merchantSpace}
               </button>
             </div>
           )}
@@ -471,14 +429,12 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
       <section id="tarifs" className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
         <div className="max-w-2xl">
-          <p className="text-sm text-ledger-green">{isFr ? 'Formules' : 'Plans'}</p>
+          <p className="text-sm text-ledger-green">{t.landing.pricingEyebrow}</p>
           <h2 className="mt-3 font-registry text-3xl leading-tight tracking-[-0.02em] text-ledger-ink sm:text-4xl">
-            {isFr ? 'Commencez petit, grandissez à votre rythme' : 'Start small, grow at your pace'}
+            {t.landing.pricingTitle}
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-ledger-muted">
-            {isFr
-              ? 'Une vitrine gratuite pour démarrer, puis plus de place quand votre catalogue grandit.'
-              : 'A free storefront to start, then more room as your catalog grows.'}
+            {t.landing.pricingDescription}
           </p>
         </div>
         <div className="mt-10 grid gap-3 sm:grid-cols-3">
@@ -491,53 +447,40 @@ export const LandingView: React.FC<LandingViewProps> = ({
               >
                 <p className="font-registry text-lg text-ledger-ink">{plan.label}</p>
                 <p className="mt-3 font-registry text-3xl text-ledger-green">
-                  {plan.price === 0
-                    ? isFr
-                      ? 'Gratuit'
-                      : 'Free'
-                    : formatFCFA(plan.price, language)}
+                  {plan.price === 0 ? t.landing.freeLabel : formatFCFA(plan.price, language)}
                 </p>
                 <p className="mt-1 text-xs text-ledger-muted">
-                  {plan.price === 0
-                    ? isFr
-                      ? 'sans limite de temps'
-                      : 'no time limit'
-                    : isFr
-                      ? 'par an'
-                      : 'per year'}
+                  {plan.price === 0 ? t.landing.noTimeLimit : t.landing.perYear}
                 </p>
                 <p className="mt-4 border-t border-ledger-line pt-4 text-sm text-ledger-muted">
                   {plan.maxProducts === PLANS.premium.maxProducts
-                    ? isFr
-                      ? 'Jusqu’à 999 articles'
-                      : 'Up to 999 items'
-                    : `${plan.maxProducts} ${isFr ? 'articles' : 'items'}`}
+                    ? t.landing.upToItems.replace('{count}', String(plan.maxProducts))
+                    : `${plan.maxProducts} ${t.landing.itemsLabel}`}
                 </p>
                 <button
                   type="button"
                   onClick={onCreateStore}
                   className={`mt-5 min-h-11 w-full rounded-md border border-ledger-line bg-ledger-surface px-4 py-2.5 text-sm font-semibold text-ledger-ink transition-colors hover:border-ledger-green ${FOCUS}`}
                 >
-                  {isFr ? 'Créer ma vitrine' : 'Create my storefront'}
+                  {t.landing.createStoreCta}
                 </button>
               </div>
             );
           })}
         </div>
         <p className="mt-4 max-w-3xl text-xs leading-relaxed text-ledger-muted">
-          {isFr
-            ? `Codes promo : ${PROMO_CODES.join(', ')}. Pro à ${formatFCFA(PLANS.pro.promoPrice, 'fr')} et Premium à ${formatFCFA(PLANS.premium.promoPrice, 'fr')} la première année.`
-            : `Promo codes: ${PROMO_CODES.join(', ')}. Pro at ${formatFCFA(PLANS.pro.promoPrice, 'en')} and Premium at ${formatFCFA(PLANS.premium.promoPrice, 'en')} for the first year.`}
+          {t.landing.pricingNote
+            .replace('{codes}', PROMO_CODES.join(', '))
+            .replace('{pro}', formatFCFA(PLANS.pro.promoPrice, language))
+            .replace('{premium}', formatFCFA(PLANS.premium.promoPrice, language))}
         </p>
       </section>
 
       <section id="faq" className="border-t border-ledger-line bg-ledger-surface">
         <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
-          <p className="text-sm text-ledger-green">
-            {isFr ? 'Questions fréquentes' : 'Common questions'}
-          </p>
+          <p className="text-sm text-ledger-green">{t.landing.faqEyebrow}</p>
           <h2 className="mt-3 font-registry text-3xl leading-tight tracking-[-0.02em] text-ledger-ink sm:text-4xl">
-            {isFr ? 'Ce que vous demandez le plus' : 'What you ask most'}
+            {t.landing.faqTitle}
           </h2>
           <div className="mt-8 border-t border-ledger-line">
             {faqCopy.map((item) => (
@@ -559,9 +502,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
       <section className="border-t border-ledger-line bg-ledger-ink text-ledger-surface">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p className="font-registry text-2xl">
-            {isFr ? 'Votre vitrine est prête.' : 'Your storefront is ready.'}
-          </p>
+          <p className="font-registry text-2xl">{t.landing.finalCtaTitle}</p>
           <button
             type="button"
             onClick={onCreateStore}
@@ -585,10 +526,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </div>
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-ledger-muted">
             <a href="#boutiques" className={`transition-colors hover:text-ledger-green ${FOCUS}`}>
-              {isFr ? 'Boutiques' : 'Stores'}
+              {t.landing.storesNav}
             </a>
             <a href="#tarifs" className={`transition-colors hover:text-ledger-green ${FOCUS}`}>
-              {isFr ? 'Formules' : 'Plans'}
+              {t.landing.plansNav}
             </a>
             <button
               type="button"
@@ -596,7 +537,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               className={`inline-flex items-center gap-1.5 transition-colors hover:text-ledger-green ${FOCUS}`}
             >
               <LockKeyhole className="h-3.5 w-3.5" />
-              {isFr ? 'Espace gérant' : 'Merchant space'}
+              {t.landing.merchantSpace}
             </button>
             <LanguageSwitcher variant="footer" />
           </nav>

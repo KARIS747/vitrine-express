@@ -229,6 +229,9 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   const [renewPlan, setRenewPlan] = useState<PlanId>('decouverte');
   const [renewMonths, setRenewMonths] = useState('12');
   const [renewPromo, setRenewPromo] = useState('');
+  const [renewOperator, setRenewOperator] = useState('');
+  const [renewReference, setRenewReference] = useState('');
+  const [renewNote, setRenewNote] = useState('');
 
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [notifTargetStoreId, setNotifTargetStoreId] = useState<string>('');
@@ -392,6 +395,9 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     setRenewPlan(store.plan ?? planFromQuota(store.max_products));
     setRenewMonths('12');
     setRenewPromo('');
+    setRenewOperator('');
+    setRenewReference('');
+    setRenewNote('');
   };
 
   const submitRenew = async (event: React.FormEvent) => {
@@ -409,6 +415,9 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       const result = await dbService.renewStoreLicense(target.id, months, {
         plan: renewPlan,
         promoCode: promo || undefined,
+        paymentOperator: renewOperator.trim() || undefined,
+        paymentReference: renewReference.trim() || undefined,
+        note: renewNote.trim() || undefined,
       });
       if (result.success && result.store) {
         setStores((current) => current.map((item) => item.id === target.id ? { ...item, ...result.store } : item));
@@ -1634,6 +1643,51 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
                 />
               </div>
             )}
+
+            <div className="border-t border-ledger-line pt-4 space-y-3">
+              <p className="text-xs text-ledger-muted">
+                Renseignez ces informations si le règlement a déjà été reçu sur WhatsApp.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL} htmlFor="renew-operator">Opérateur (optionnel)</label>
+                  <select
+                    id="renew-operator"
+                    value={renewOperator}
+                    onChange={(event) => setRenewOperator(event.target.value)}
+                    className={FIELD}
+                  >
+                    <option value="">Non précisé</option>
+                    <option value="MTN MoMo">MTN MoMo</option>
+                    <option value="Orange Money">Orange Money</option>
+                    <option value="Espèces">Espèces</option>
+                    <option value="Virement">Virement</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL} htmlFor="renew-reference">Référence (optionnelle)</label>
+                  <input
+                    id="renew-reference"
+                    type="text"
+                    value={renewReference}
+                    onChange={(event) => setRenewReference(event.target.value)}
+                    placeholder="Ex : TXN-123456"
+                    className={`${FIELD} font-ledger-mono`}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={LABEL} htmlFor="renew-note">Note interne (optionnelle)</label>
+                <input
+                  id="renew-note"
+                  type="text"
+                  value={renewNote}
+                  onChange={(event) => setRenewNote(event.target.value)}
+                  placeholder="Ex : capture reçue sur WhatsApp"
+                  className={FIELD}
+                />
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>

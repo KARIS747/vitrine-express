@@ -654,7 +654,14 @@ class DatabaseService {
   async renewStoreLicense(
     storeId: string,
     additionalMonths = 12,
-    options?: { plan?: PlanId; promoCode?: string; amountPaid?: number },
+    options?: {
+      plan?: PlanId;
+      promoCode?: string;
+      amountPaid?: number;
+      paymentOperator?: string;
+      paymentReference?: string;
+      note?: string;
+    },
   ): Promise<{ success: boolean; store?: Store; error?: string; amountPaid?: number }> {
     try {
       const res = await fetch(`${API_BASE}/admin/licenses`, {
@@ -669,6 +676,9 @@ class DatabaseService {
           ...(options?.plan ? { plan: options.plan } : {}),
           ...(options?.promoCode ? { promoCode: options.promoCode } : {}),
           ...(options?.amountPaid !== undefined ? { amountPaid: options.amountPaid } : {}),
+          ...(options?.paymentOperator ? { paymentOperator: options.paymentOperator } : {}),
+          ...(options?.paymentReference ? { paymentReference: options.paymentReference } : {}),
+          ...(options?.note ? { note: options.note } : {}),
         }),
       });
       const data = await parseJson(res);
