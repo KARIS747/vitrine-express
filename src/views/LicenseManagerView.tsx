@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Store } from '../types';
-import { dbService, CreatedStoreAccess } from '../services/db';
+import { dbService, AdminAnalytics, CreatedStoreAccess } from '../services/db';
 import { formatDate, formatFCFA } from '../utils/formatters';
 import { downloadStoreAccessPdf } from '../utils/accessSheet';
 import {
@@ -208,6 +208,16 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const [stores, setStores] = useState<Store[]>([]);
+  const [analytics, setAnalytics] = useState<AdminAnalytics>({
+    totals: {
+      landingOpens: 0,
+      storeCreated: 0,
+      whatsappClicks: 0,
+      stores: 0,
+      storesWithProducts: 0,
+    },
+    campaigns: [],
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -273,10 +283,17 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
     }
   };
 
+  const loadAnalytics = useCallback(async () => {
+    const result = await dbService.getAdminAnalytics();
+    if (result.success && result.analytics) {
+      setAnalytics(result.analytics);
+    }
+  }, []);
+
   const loadStores = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await dbService.getAdminStores();
+    const [result] = await Promise.all([dbService.getAdminStores(), loadAnalytics()]);
     if (result.success) {
       setStores(result.stores);
     } else {
@@ -286,7 +303,7 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
       }
     }
     setIsLoading(false);
-  }, []);
+  }, [loadAnalytics]);
 
   useEffect(() => {
     if (isAuthenticated) void loadStores();
@@ -800,6 +817,25 @@ export const LicenseManagerView: React.FC<LicenseManagerViewProps> = ({
               </button>
             );
           })}
+        </div>
+
+        <div className="grid grid-cols-2 border-b border-ledger-line sm:grid-cols-4">
+          {[
+            { label: 'Liens ouverts', value: analytics.totals.landingOpens },
+            { label: 'Inscriptions', value: analytics.totals.storeCreated },
+            { label: 'Boutiques avec produit', value: analytics.totals.storesWithProducts },
+            { label: 'Clics WhatsApp', value: analytics.totals.whatsappClicks },
+          ].map((metric, index) => (
+            <div
+              key={metric.label}
+              className={`py-3 sm:px-5 ${index > 0 ? 'border-l border-ledger-line pl-4 sm:pl-5' : 'pr-4 sm:pr-0'} ${index > 1 ? 'border-t border-ledger-line sm:border-t-0' : ''}`}
+            >
+              <span className="block font-registry text-xl leading-none tabular-nums text-ledger-green">
+                {metric.value}
+              </span>
+              <span className="block text-[11px] text-ledger-muted mt-1">{metric.label}</span>
+            </div>
+          ))}
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between py-3 text-xs text-ledger-muted border-b border-ledger-line">

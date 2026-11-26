@@ -29,6 +29,17 @@ export interface CreatedStoreAccess {
   promoApplied?: boolean;
 }
 
+export interface AdminAnalytics {
+  totals: {
+    landingOpens: number;
+    storeCreated: number;
+    whatsappClicks: number;
+    stores: number;
+    storesWithProducts: number;
+  };
+  campaigns: { campaign: string; total: number }[];
+}
+
 export interface StoreSettingsPayload {
   name: string;
   tagline: string;
@@ -266,6 +277,7 @@ class DatabaseService {
     pinCode: string;
     selectedPlan?: 'decouverte' | 'pro' | 'premium';
     promoCode?: string;
+    campaign?: string;
   }): Promise<{
     success: boolean;
     store?: Store;
@@ -551,6 +563,23 @@ class DatabaseService {
       return { success: true, stores: data.stores ?? [] };
     } catch {
       return { success: false, stores: [], error: 'Erreur réseau' };
+    }
+  }
+
+  async getAdminAnalytics(): Promise<{ success: boolean; analytics?: AdminAnalytics; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/analytics`);
+      const data = await parseJson(res);
+      if (res.status === 401) {
+        this.clearAdminKey();
+        return { success: false, error: data.error ?? 'Session administrateur expirée' };
+      }
+      if (!res.ok) {
+        return { success: false, error: data.error ?? 'Erreur de chargement des statistiques' };
+      }
+      return { success: true, analytics: data as AdminAnalytics };
+    } catch {
+      return { success: false, error: 'Erreur réseau' };
     }
   }
 

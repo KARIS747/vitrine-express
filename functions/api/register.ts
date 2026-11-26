@@ -17,6 +17,7 @@ import {
   type SecurityEnv,
 } from "../_lib/security";
 import { publicStore } from "../_lib/store";
+import { recordAnalyticsEvent } from "../_lib/analytics";
 import {
   addMonths,
   isPromoCode,
@@ -74,6 +75,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       pinCode,
       selectedPlan = "decouverte",
       promoCode = "",
+      campaign,
     } = body;
 
     const cleanName = String(storeName ?? "").trim().slice(0, 80);
@@ -287,6 +289,8 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         throw insertErr;
       }
     }
+
+    await recordAnalyticsEvent(db, "store_created", { storeRef: storeId, campaign });
 
     // 7. Connexion automatique immédiate : création de la session HttpOnly
     const { token } = await createSession(

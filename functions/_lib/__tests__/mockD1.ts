@@ -8,6 +8,7 @@ export interface MockD1Options {
   notifications?: any[];
   notification_reads?: any[];
   license_payments?: any[];
+  analytics_events?: any[];
 }
 
 export function createMockD1(initial: MockD1Options = {}) {
@@ -20,6 +21,7 @@ export function createMockD1(initial: MockD1Options = {}) {
   const notifications = [...(initial.notifications || [])];
   const notificationReads = [...(initial.notification_reads || [])];
   const licensePayments = [...(initial.license_payments || [])];
+  const analyticsEvents = [...(initial.analytics_events || [])];
 
   function latest(records: any[]): any {
     return [...records].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))).pop() || null;
@@ -103,6 +105,12 @@ export function createMockD1(initial: MockD1Options = {}) {
           const st = stores.find((s) => s.id === id);
           return st ? storeWithComputed(st) : null;
         }
+        if (norm.includes('select count(distinct store_id) as total from products')) {
+          return { total: new Set(products.map((product) => product.store_id)).size };
+        }
+        if (norm.includes('select count(*) as total from stores')) {
+          return { total: stores.length };
+        }
         if (norm.includes('from products where store_id') && norm.includes('count(*)')) {
           const storeId = params[0];
           const count = products.filter((p) => p.store_id === storeId).length;
@@ -153,6 +161,24 @@ export function createMockD1(initial: MockD1Options = {}) {
             };
           });
           return { results: matched };
+        }
+        if (norm.includes('from analytics_events') && norm.includes('group by')) {
+          const groupByCampaign = norm.includes('group by campaign');
+          const keyField = groupByCampaign ? 'campaign' : 'event';
+          const source = groupByCampaign
+            ? analyticsEvents.filter((item) => Boolean(item.campaign))
+            : analyticsEvents;
+          const counts = new Map<string, number>();
+          for (const item of source) {
+            const key = String(item[keyField] ?? '');
+            if (!key) continue;
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+          }
+          const results = Array.from(counts.entries()).map(([key, total]) =>
+            groupByCampaign ? { campaign: key, total } : { event: key, total },
+          );
+          if (groupByCampaign) results.sort((a, b) => (b as any).total - (a as any).total);
+          return { results };
         }
         if (norm.includes('from stores')) {
           return {
@@ -324,6 +350,17 @@ export function createMockD1(initial: MockD1Options = {}) {
           });
           return { success: true, meta: { changes: 1 } };
         }
+        if (norm.includes('insert into analytics_events')) {
+          const [id, event, storeRef, campaign, createdAt] = params;
+          analyticsEvents.push({
+            id,
+            event,
+            store_ref: storeRef,
+            campaign,
+            created_at: createdAt,
+          });
+          return { success: true, meta: { changes: 1 } };
+        }
         if (norm.includes('insert into products')) {
           const prodObj: any = {
             id: params[0],
@@ -399,6 +436,7 @@ export function createMockD1(initial: MockD1Options = {}) {
     notifications,
     notificationReads,
     licensePayments,
+    analyticsEvents,
     prepare(sql: string) {
       return createStatement(sql);
     },

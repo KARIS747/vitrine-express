@@ -189,6 +189,8 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
 
     const effectiveCountry = country === 'Autre' ? customCountry.trim() : country;
     const effectiveCity = city === 'Autre' ? (customCity.trim() || 'Autre') : city;
+    const params = new URLSearchParams(window.location.search);
+    const campaign = params.get('utm_campaign') || params.get('utm_source') || undefined;
 
     setIsSubmitting(true);
     try {
@@ -203,6 +205,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
         pinCode: pinCode.trim(),
         selectedPlan,
         promoCode: promoCode.trim(),
+        campaign,
       });
 
       if (!res.success || !res.store) {

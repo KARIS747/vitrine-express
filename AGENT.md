@@ -69,6 +69,7 @@ Le schéma complet est défini dans `schema.sql`.
 7. **`sessions`** : Sessions HttpOnly pour marchands et administrateur (`token_hash`, `scope`, `store_id`, `expires_at`).
 8. **`auth_attempts`** : Protection anti-brute force / rate limiting.
 9. **`licenses`** : Historique et facturation interne.
+10. **`analytics_events`** : Événements de prospection (`id`, `event`, `store_ref`, `campaign`, `created_at`) avec événements autorisés `landing_open`, `store_created`, `whatsapp_order_click`.
 
 ---
 
@@ -85,6 +86,7 @@ Contient les définitions uniques des plans (`PLAN_IDS`, `PLANS`, `normalizePlan
 - `GET /api/stores` : Liste des boutiques actives (pour vitrine globale/annuaire).
 - `GET /api/stores/[slug]` : Données publiques complètes d'une boutique (infos, catégories, produits en stock).
 - `POST /api/register` : Inscription d'un nouveau commerçant (vérification d'unicité du nom insensible à la casse, application code promo, attribution plan).
+- `POST /api/analytics` : Enregistrement best-effort des événements publics autorisés.
 - `GET /boutique/[slug]` : App Shell SSR pour SEO et prévisualisation OpenGraph.
 
 ### Routes Espace Marchand (`functions/api/merchant/`)
@@ -102,6 +104,7 @@ Contient les définitions uniques des plans (`PLAN_IDS`, `PLANS`, `normalizePlan
 - `POST /api/admin/login` : Connexion administrateur avec mot de passe maître sécurisé.
 - `GET|POST|PUT /api/admin/licenses` : Gestion des boutiques et licences.
 - `GET|POST /api/admin/notifications` : Diffusion de notifications in-app (générales ou ciblées).
+- `GET /api/admin/analytics` : Compteurs de prospection et campagnes affichés dans le License Manager.
 - `POST /api/admin/logout` : Déconnexion administrateur.
 
 ---

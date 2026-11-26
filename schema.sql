@@ -104,6 +104,17 @@ CREATE TABLE IF NOT EXISTS license_payments (
 CREATE INDEX IF NOT EXISTS idx_license_payments_store ON license_payments(store_id);
 CREATE INDEX IF NOT EXISTS idx_license_payments_status ON license_payments(store_id, status);
 
+CREATE TABLE IF NOT EXISTS analytics_events (
+    id TEXT PRIMARY KEY,
+    event TEXT NOT NULL,
+    store_ref TEXT,
+    campaign TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at);
+
 -- 5. Limitation des tentatives de connexion (admin et boutiquiers)
 CREATE TABLE IF NOT EXISTS auth_attempts (
     limiter_key TEXT PRIMARY KEY,          -- Hash de l'IP, de la licence ou de la boutique

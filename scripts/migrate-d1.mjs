@@ -62,6 +62,20 @@ const migrations = [
       runSql("UPDATE stores SET whatsapp_number = '237681610040', phone_call = '+237 681 61 00 40' WHERE id = 'store_demo_1'");
     },
   },
+  {
+    id: '0002_analytics_events',
+    run() {
+      runSql(`CREATE TABLE IF NOT EXISTS analytics_events (
+        id TEXT PRIMARY KEY,
+        event TEXT NOT NULL,
+        store_ref TEXT,
+        campaign TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )`);
+      runSql('CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event)');
+      runSql('CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at)');
+    },
+  },
 ];
 
 for (const migration of migrations) {

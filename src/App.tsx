@@ -22,6 +22,7 @@ const RegisterView = lazy(() =>
   import('./views/RegisterView').then((module) => ({ default: module.RegisterView })),
 );
 import { updatePageSeo } from './utils/seo';
+import { trackEvent } from './utils/analytics';
 import { Toaster, toast } from 'sonner';
 import { AlertCircle, Home, RefreshCw, Store as StoreIcon, WifiOff } from 'lucide-react';
 
@@ -190,6 +191,19 @@ export const App: React.FC = () => {
       void loadPublicStore();
     } else if (initialView === 'landing') {
       void loadLandingStores();
+      const params = new URLSearchParams(window.location.search);
+      const campaign = params.get('utm_campaign') || params.get('utm_source');
+      if (campaign) {
+        try {
+          const key = `ve_landing_tracked_${campaign}`;
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, '1');
+            trackEvent('landing_open', { campaign });
+          }
+        } catch {
+          trackEvent('landing_open', { campaign });
+        }
+      }
     } else if (initialView === 'terms') {
       updatePageSeo({
         title: 'CGU/CGV — VitrineExpress',
@@ -207,6 +221,19 @@ export const App: React.FC = () => {
     const session = dbService.getMerchantSession();
     if (session) void loadMerchantData();
   }, [loadLandingStores, loadMerchantData, loadPublicStore]);
+
+  useEffect(() => {
+    const trackWhatsAppClick = (event: MouseEvent) => {
+      if (currentView !== 'storefront') return;
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest<HTMLAnchorElement>('a[href^="https://wa.me/"]');
+      if (!anchor) return;
+      trackEvent('whatsapp_order_click', { storeRef: slugFromLocation() });
+    };
+
+    document.addEventListener('click', trackWhatsAppClick);
+    return () => document.removeEventListener('click', trackWhatsAppClick);
+  }, [currentView]);
 
   useEffect(() => {
     const onPopState = () => {
