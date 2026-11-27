@@ -15,6 +15,26 @@ export interface Translations {
     searchPlaceholder: string;
     subTitle: string;
   };
+  register: {
+    step1: string;
+    step1Title: string;
+    step1Hint: string;
+    step2: string;
+    step2Title: string;
+    step2Hint: string;
+    step3: string;
+    step3Title: string;
+    step3Hint: string;
+    step4: string;
+    step4Title: string;
+    step4Hint: string;
+    step5: string;
+    step5Title: string;
+    step5Hint: string;
+    next: string;
+    back: string;
+    creating: string;
+  };
   // Landing Page
   landing: {
     tagline: string;
@@ -162,6 +182,26 @@ export const translations: Record<Language, Translations> = {
       privacy: 'Confidentialité',
       searchPlaceholder: 'Rechercher un article...',
       subTitle: 'Vitrines en ligne',
+    },
+    register: {
+      step1: 'Votre boutique',
+      step1Title: 'Donnez un nom à votre vitrine',
+      step1Hint: 'Ce nom apparaîtra sur votre lien public et vos messages WhatsApp.',
+      step2: 'Votre contact',
+      step2Title: 'Votre numéro WhatsApp',
+      step2Hint: 'Ce numéro reçoit directement les commandes de vos clients.',
+      step3: 'Votre emplacement',
+      step3Title: 'Où se trouve votre commerce ?',
+      step3Hint: 'Ajoutez votre préférence de contact pour l’assistance.',
+      step4: 'Votre accès',
+      step4Title: 'Créez votre code PIN secret',
+      step4Hint: 'Entre 4 et 12 caractères. Il ne sera affiché qu’une seule fois.',
+      step5: 'Votre formule',
+      step5Title: 'Choisissez votre point de départ',
+      step5Hint: 'Commencez gratuitement, puis évoluez quand vous le souhaitez.',
+      next: 'Continuer',
+      back: 'Retour',
+      creating: 'Création de votre vitrine en cours...',
     },
     landing: {
       tagline: 'Le commerce de proximité, en ligne',
@@ -318,6 +358,26 @@ export const translations: Record<Language, Translations> = {
       privacy: 'Privacy',
       searchPlaceholder: 'Search for an item...',
       subTitle: 'Online storefronts',
+    },
+    register: {
+      step1: 'Your store',
+      step1Title: 'Name your storefront',
+      step1Hint: 'This name appears on your public link and WhatsApp messages.',
+      step2: 'Your contact',
+      step2Title: 'Your WhatsApp number',
+      step2Hint: 'This number receives your customers’ orders directly.',
+      step3: 'Your location',
+      step3Title: 'Where is your business?',
+      step3Hint: 'Add your contact preference for support.',
+      step4: 'Your access',
+      step4Title: 'Create your secret PIN',
+      step4Hint: '4 to 12 characters. It is shown only once.',
+      step5: 'Your plan',
+      step5Title: 'Choose your starting point',
+      step5Hint: 'Start free, then upgrade whenever you want.',
+      next: 'Continue',
+      back: 'Back',
+      creating: 'Creating your storefront...',
     },
     landing: {
       tagline: 'Local commerce, made digital',

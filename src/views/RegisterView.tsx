@@ -4,8 +4,24 @@ import { Store } from '../types';
 import { dbService } from '../services/db';
 import { toast } from 'sonner';
 import { useLanguage } from '../utils/i18n';
+import { PROMO_CODES, planPrice, type PlanId } from '../utils/plans';
+import {
+  isEmailValid as checkEmailValid,
+  isLocationValid,
+  isNameValid as checkNameValid,
+  isPhoneValid as checkPhoneValid,
+  isPinMatch as checkPinMatch,
+  isPinValid as checkPinValid,
+  isStepValid,
+  nextStep,
+  normalizePhone,
+  previousStep,
+  type RegistrationValues,
+  type WizardStep,
+} from '../utils/registrationWizard';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   Check,
   CheckCircle2,
@@ -60,7 +76,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
   onNavigateHome,
   onOpenStore,
 }) => {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Form State
   const [storeName, setStoreName] = useState('');
@@ -75,8 +91,9 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
   const [pinCode, setPinCode] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
   const [showPin, setShowPin] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'decouverte' | 'pro' | 'premium'>('decouverte');
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>('decouverte');
   const [promoCode, setPromoCode] = useState('');
+  const [currentStep, setCurrentStep] = useState<WizardStep>(1);
 
   // UI State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,13 +107,11 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     priceDue: number;
   } | null>(null);
 
-  const VALID_PROMO_CODES = useMemo(() => ['VIP237', 'PROMO10', 'EXPRESS', 'LANCEMENT', 'DOUALA', 'YAOUNDE'], []);
   const cleanPromo = promoCode.trim().toUpperCase();
-  const isPromoValid = VALID_PROMO_CODES.includes(cleanPromo);
-  const proPrice = isPromoValid ? 5000 : 8000;
-  const premiumPrice = isPromoValid ? 14000 : 20000;
+  const isPromoValid = PROMO_CODES.includes(cleanPromo);
+  const proPrice = planPrice('pro', isPromoValid);
+  const premiumPrice = planPrice('premium', isPromoValid);
 
-  // Slug preview computation
   const previewSlug = useMemo(() => {
     return storeName
       .toLowerCase()
@@ -108,56 +123,51 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
       .slice(0, 40);
   }, [storeName]);
 
-  // Validation checks for individual fields
-  const isNameValid = storeName.trim().length >= 2;
-  const cleanPhone = whatsappNumber.replace(/[^0-9]/g, '');
-  const isPhoneValid = cleanPhone.length >= 8 && cleanPhone.length <= 15;
-  const isEmailValid =
-    contactPreference === 'whatsapp' ||
-    (contactPreference === 'email' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim()));
-  const isPinValid = pinCode.length >= 4;
-  const isPinMatch = isPinValid && pinCode === pinConfirm;
+  const values: RegistrationValues = {
+    storeName,
+    whatsappNumber,
+    country,
+    customCountry,
+    city,
+    customCity,
+    contactPreference,
+    contactEmail,
+    pinCode,
+    pinConfirm,
+    selectedPlan,
+    promoCode,
+  };
 
-  // Calcul dynamique de la progression (0 à 100%)
-  const { progress, stepStatus } = useMemo(() => {
-    let score = 0;
-    if (isNameValid) score += 25;
-    if (isPhoneValid) score += 25;
-    if (isEmailValid) score += 20;
-    if (isPinMatch) score += 30;
+  const isNameValid = checkNameValid(values);
+  const cleanPhone = normalizePhone(values.whatsappNumber);
+  const isPhoneValid = checkPhoneValid(values);
+  const isEmailValid = checkEmailValid(values);
+  const isPinValid = checkPinValid(values);
+  const isPinMatch = checkPinMatch(values);
+  const isLocationValidStep = isLocationValid(values);
+  const stepValid = isStepValid(currentStep, values);
 
-    let status = {
-      label: 'Étape 1 sur 3 · Nom commercial',
-      detail: 'Indiquez le nom officiel de votre enseigne',
-      icon: StoreIcon,
-      color: 'text-ink-800 dark:text-ink-200',
-    };
-
-    if (score === 25) {
-      status = {
-        label: 'Étape 2 sur 3 · Numéro WhatsApp',
-        detail: 'Numéro de réception des commandes clients',
-        icon: MessageCircle,
-        color: 'text-emerald-700 dark:text-emerald-400',
-      };
-    } else if (score >= 50 && score < 100) {
-      status = {
-        label: 'Étape 3 sur 3 · Code d\'accès',
-        detail: 'Définissez votre code PIN secret (4 à 12 caractères)',
-        icon: Lock,
-        color: 'text-brand-700 dark:text-brand-400',
-      };
-    } else if (score === 100) {
-      status = {
-        label: 'Prêt pour l\'ouverture',
-        detail: 'Tous les champs requis sont validés',
-        icon: CheckCircle2,
-        color: 'text-emerald-700 dark:text-emerald-400',
-      };
-    }
-
-    return { progress: score, stepStatus: status };
-  }, [isNameValid, isPhoneValid, isEmailValid, isPinMatch]);
+  const stepTitles = [
+    t.register.step1Title,
+    t.register.step2Title,
+    t.register.step3Title,
+    t.register.step4Title,
+    t.register.step5Title,
+  ];
+  const stepHints = [
+    t.register.step1Hint,
+    t.register.step2Hint,
+    t.register.step3Hint,
+    t.register.step4Hint,
+    t.register.step5Hint,
+  ];
+  const stepNames = [
+    t.register.step1,
+    t.register.step2,
+    t.register.step3,
+    t.register.step4,
+    t.register.step5,
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,7 +178,16 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
     }
 
     if (!isPhoneValid) {
-      toast.error('Numéro WhatsApp invalide (minimum 8 chiffres).');
+      toast.error('Numéro WhatsApp invalide (8 à 15 chiffres).');
+      return;
+    }
+
+    if (!isLocationValidStep) {
+      toast.error(
+        language === 'fr'
+          ? 'Précisez votre pays personnalisé.'
+          : 'Please enter your custom country.',
+      );
       return;
     }
 
@@ -389,41 +408,34 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
           </p>
         </div>
 
-        {/* ==================================================== */}
-        {/* INDICATEUR D'ÉTAPE ET PROGRESSION                   */}
-        {/* ==================================================== */}
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-5 p-4 rounded-xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 shadow-xs"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <stepStatus.icon className={`w-4 h-4 shrink-0 ${stepStatus.color}`} />
-              <div className="min-w-0">
-                <span className="text-xs font-semibold text-ink-900 dark:text-white block truncate">
-                  {stepStatus.label}
-                </span>
-                <span className="text-[11px] text-ink-500 dark:text-ink-400 block truncate">
-                  {stepStatus.detail}
-                </span>
-              </div>
+        <div className="mb-5 border-b border-ledger-line pb-4 dark:border-ink-800">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-ledger-mono text-[11px] tracking-[0.12em] text-ledger-green dark:text-emerald-400">
+                {String(currentStep).padStart(2, '0')} / 05 · {stepNames[currentStep - 1]}
+              </p>
+              <h2 className="mt-2 font-registry text-2xl leading-tight text-ledger-ink dark:text-white sm:text-3xl">
+                {stepTitles[currentStep - 1]}
+              </h2>
+              <p className="mt-1.5 text-xs leading-relaxed text-ledger-muted dark:text-ink-400">
+                {stepHints[currentStep - 1]}
+              </p>
             </div>
-            <span className="text-xs font-mono font-semibold text-ink-500 dark:text-ink-400 shrink-0 ml-3">
-              {progress}%
-            </span>
+            <div className="flex gap-1.5" aria-hidden="true">
+              {stepNames.map((name, index) => {
+                const step = (index + 1) as WizardStep;
+                return (
+                  <span
+                    key={name}
+                    className={`h-0.5 w-6 rounded-full transition-colors duration-150 motion-reduce:transition-none ${
+                      step <= currentStep ? 'bg-ledger-green' : 'bg-ledger-line dark:bg-ink-700'
+                    }`}
+                  />
+                );
+              })}
+            </div>
           </div>
-
-          {/* Track */}
-          <div className="w-full h-1.5 rounded-full bg-warm-100 dark:bg-ink-800 overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-emerald-600 dark:bg-emerald-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            />
-          </div>
-        </motion.div>
+        </div>
 
         {/* ==================================================== */}
         {/* APERÇU EN DIRECT DE LA VITRINE                       */}
@@ -464,7 +476,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
         {/* ==================================================== */}
         <div className="bg-white dark:bg-ink-900 rounded-3xl border border-ink-100 dark:border-ink-800 shadow-elevated p-6 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* 1. Nom de la boutique */}
+            {currentStep === 1 && (
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="store-name" className="text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider">
@@ -493,8 +505,9 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                 />
               </div>
             </div>
+            )}
 
-            {/* 2. Numéro WhatsApp */}
+            {currentStep === 2 && (
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="store-whatsapp" className="text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider">
@@ -526,8 +539,10 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                 Vos clients cliqueront dessus pour vous envoyer directement leur panier de commande WhatsApp.
               </p>
             </div>
+            )}
 
-            {/* 3. Pays, Ville & Quartier */}
+            {currentStep === 3 && (
+            <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="store-country" className="block text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider mb-1.5">
@@ -602,7 +617,6 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               </div>
             </div>
 
-            {/* 4. Préférence de contact (WhatsApp ou Email) */}
             <div className="pt-3 border-t border-ink-100 dark:border-ink-800">
               <label className="block text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider mb-1">
                 Comment préférez-vous être contacté ? *
@@ -684,8 +698,10 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                 )}
               </AnimatePresence>
             </div>
+            </>
+            )}
 
-            {/* 5. Code PIN Secret */}
+            {currentStep === 4 && (
             <div className="pt-3 border-t border-ink-100 dark:border-ink-800">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider">
@@ -746,8 +762,10 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                 </div>
               </div>
             </div>
+            )}
 
-            {/* 6. Choix de la formule */}
+            {currentStep === 5 && (
+            <>
             <div className="pt-3 border-t border-ink-100 dark:border-ink-800">
               <label className="block text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider mb-1">
                 Choisissez votre formule de départ
@@ -833,7 +851,6 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
               </div>
             </div>
 
-            {/* 7. Code promo (optionnel) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="promo-code" className="text-xs font-semibold text-ink-700 dark:text-ink-300 uppercase tracking-wider">
@@ -857,32 +874,58 @@ export const RegisterView: React.FC<RegisterViewProps> = ({
                 />
               </div>
             </div>
+            </>
+            )}
 
-            {/* Bouton de soumission */}
-            <div className="pt-3">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-medium text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Création de votre vitrine en cours...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>
-                      {selectedPlan === 'decouverte'
-                        ? 'Créer ma vitrine (8 articles gratuits)'
-                        : selectedPlan === 'pro'
-                        ? `Créer ma vitrine · Plan Pro (${proPrice.toLocaleString('fr-FR')} FCFA/an)`
-                        : `Créer ma vitrine · Plan Premium (${premiumPrice.toLocaleString('fr-FR')} FCFA/an)`}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+            <div className="flex items-center justify-between gap-3 pt-5 border-t border-ink-100 dark:border-ink-800">
+              {currentStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(previousStep(currentStep))}
+                  className="inline-flex items-center gap-1.5 min-h-11 px-4 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-ink-700 dark:text-ink-200 text-xs font-semibold hover:bg-warm-100 dark:hover:bg-ink-800 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  {t.register.back}
+                </button>
+              ) : (
+                <span className="text-[11px] text-ink-400 dark:text-ink-500">{t.register.step1}</span>
+              )}
+
+              {currentStep < 5 ? (
+                <button
+                  type="button"
+                  disabled={!stepValid}
+                  onClick={() => setCurrentStep(nextStep(currentStep))}
+                  className="inline-flex items-center gap-1.5 min-h-11 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t.register.next}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !stepValid}
+                  className="inline-flex items-center justify-center gap-2 min-h-11 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{t.register.creating}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {selectedPlan === 'decouverte'
+                          ? 'Créer ma vitrine et obtenir mon lien'
+                          : selectedPlan === 'pro'
+                          ? `Créer ma vitrine · Plan Pro (${proPrice.toLocaleString('fr-FR')} FCFA/an)`
+                          : `Créer ma vitrine · Plan Premium (${premiumPrice.toLocaleString('fr-FR')} FCFA/an)`}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Réassurance */}
