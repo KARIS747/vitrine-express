@@ -14,6 +14,8 @@ import {
   Store as StoreIcon,
 } from 'lucide-react';
 
+const SUPPORT_WHATSAPP = '237681610040';
+
 interface MerchantLoginViewProps {
   onLoginSuccess: (store: Store) => void;
   onBack: () => void;
@@ -69,6 +71,14 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
           'Restock dates displayed for your customers',
           'A shareable link and QR code',
         ];
+
+  const canRequestPinReset = identifier.trim().length > 0;
+  const forgotPinUrl = `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(
+    t.merchant.forgotPinMessage.replace(
+      '{identifier}',
+      canRequestPinReset ? ` « ${identifier.trim()} »` : '',
+    ),
+  )}`;
 
   return (
     <div className="flex-1 min-h-[calc(100vh-3.5rem)] grid lg:grid-cols-[1.05fr_1fr]">
@@ -183,6 +193,19 @@ export const MerchantLoginView: React.FC<MerchantLoginViewProps> = ({
                     {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                <button
+                  type="button"
+                  disabled={!canRequestPinReset}
+                  onClick={() => window.open(forgotPinUrl, '_blank', 'noopener,noreferrer')}
+                  className={`inline-flex items-center gap-1.5 mt-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${
+                    canRequestPinReset
+                      ? 'text-brand-700 hover:text-brand-900 cursor-pointer'
+                      : 'text-ink-400 cursor-not-allowed'
+                  }`}
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  {t.merchant.forgotPin}
+                </button>
               </div>
 
               {error && (

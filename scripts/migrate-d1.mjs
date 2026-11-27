@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -74,6 +75,13 @@ const migrations = [
       )`);
       runSql('CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event)');
       runSql('CREATE INDEX IF NOT EXISTS idx_analytics_events_created ON analytics_events(created_at)');
+    },
+  },
+  {
+    id: '0003_niche_demo_stores',
+    run() {
+      const sql = readFileSync(resolve(root, 'migrations/0003_niche_demo_stores.sql'), 'utf8');
+      runSql(sql);
     },
   },
 ];

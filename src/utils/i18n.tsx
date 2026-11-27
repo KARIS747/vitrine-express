@@ -125,6 +125,8 @@ export interface Translations {
     licenseKeyPlaceholder: string;
     pinLabel: string;
     pinPlaceholder: string;
+    forgotPin: string;
+    forgotPinMessage: string;
     loginBtn: string;
     loginLoading: string;
     loginError: string;
@@ -281,6 +283,8 @@ export const translations: Record<Language, Translations> = {
       licenseKeyPlaceholder: 'Ex : GLAMOUR SHOP ou 699112233',
       pinLabel: 'Code PIN secret',
       pinPlaceholder: 'Code à 4 à 6 chiffres',
+      forgotPin: 'Code PIN oublié ?',
+      forgotPinMessage: "Bonjour, j'ai oublié le code PIN de ma boutique{identifier}. Merci de m'aider à le réinitialiser.",
       loginBtn: 'Accéder à mon tableau de bord',
       loginLoading: 'Vérification de vos accès...',
       loginError: 'Identifiants invalides ou compte inactif.',
@@ -435,6 +439,8 @@ export const translations: Record<Language, Translations> = {
       licenseKeyPlaceholder: 'E.g.: GLAMOUR SHOP or 699112233',
       pinLabel: 'Secret PIN code',
       pinPlaceholder: '4 to 6-digit code',
+      forgotPin: 'Forgot your PIN?',
+      forgotPinMessage: "Hello, I forgot the PIN for my store{identifier}. Please help me reset it.",
       loginBtn: 'Access my dashboard',
       loginLoading: 'Checking credentials...',
       loginError: 'Invalid credentials or inactive store.',
